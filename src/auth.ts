@@ -5,6 +5,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import { users, accounts, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const providers = [];
 
@@ -13,31 +14,32 @@ if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) {
   providers.push(GitHub);
 }
 
-// Dev-only credentials provider for local testing
-if (process.env.NODE_ENV === "development") {
-  providers.push(
-    Credentials({
-      name: "Dev Login",
-      credentials: {
-        email: { label: "Email", type: "email", placeholder: "test@dispatch.local" },
-      },
-      async authorize(credentials) {
-        const email = credentials?.email as string;
-        if (!email) return null;
+// Credentials provider for local accounts
+providers.push(
+  Credentials({
+    name: "credentials",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      const email = credentials?.email as string;
+      const password = credentials?.password as string;
 
-        // Find or create the user
-        let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        if (!user) {
-          const id = crypto.randomUUID();
-          await db.insert(users).values({ id, email, name: email.split("@")[0] });
-          [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
-        }
+      if (!email || !password) return null;
 
-        return user ? { id: user.id, name: user.name, email: user.email, image: user.image } : null;
-      },
-    })
-  );
-}
+      // Find user by email
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (!user || !user.password) return null;
+
+      // Verify password
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) return null;
+
+      return { id: user.id, name: user.name, email: user.email, image: user.image };
+    },
+  })
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {

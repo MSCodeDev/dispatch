@@ -36,6 +36,20 @@
       "when": 1770447728609,
       "tag": "0004_cold_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1770531000000,
+      "tag": "0005_sad_lorna_dane",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1770532000000,
+      "tag": "0006_sturdy_the_hood",
+      "breakpoints": true
     }
   ]
 }

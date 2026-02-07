@@ -94,6 +94,15 @@ export interface RecycleBinResponse {
   retentionDays: number;
 }
 
+export interface ApiKey {
+  id: string;
+  userId: string;
+  name: string;
+  key: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -317,5 +326,15 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ id, type, action: "delete" }),
       }),
+  },
+
+  apiKeys: {
+    list: () => request<ApiKey[]>("/api-keys"),
+
+    create: (data: { name: string }) =>
+      request<ApiKey>("/api-keys", { method: "POST", body: JSON.stringify(data) }),
+
+    delete: (id: string) =>
+      request<{ success: true }>(`/api-keys/${id}`, { method: "DELETE" }),
   },
 };

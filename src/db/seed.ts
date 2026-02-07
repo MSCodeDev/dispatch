@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { tasks, notes, dispatches, dispatchTasks, users, projects } from "./schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const sqlite = new Database("./dispatch.db");
 const db = drizzle(sqlite);
@@ -15,19 +16,26 @@ function todayStr(offset = 0) {
 async function seed() {
   console.log("Seeding database...");
 
-  // Find or create a seed user
-  let [user] = await db.select().from(users).limit(1);
+  // Keep a deterministic local credentials account for development.
+  const seedEmail = "test@dispatch.local";
+  const seedPasswordHash = await bcrypt.hash("test", 10);
+  let [user] = await db.select().from(users).where(eq(users.email, seedEmail)).limit(1);
 
   if (!user) {
     [user] = await db
       .insert(users)
       .values({
-        name: "Seed User",
-        email: "seed@dispatch.local",
+        name: "Test User",
+        email: seedEmail,
+        password: seedPasswordHash,
       })
       .returning();
     console.log("Created seed user:", user.email);
   } else {
+    await db
+      .update(users)
+      .set({ password: seedPasswordHash })
+      .where(eq(users.id, user.id));
     console.log("Using existing user:", user.email);
   }
 

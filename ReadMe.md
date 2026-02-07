@@ -48,7 +48,10 @@ npm run dev
 ```
 
 ### Dev Login (optional)
-In development, a credentials-based login is available even without GitHub OAuth. Use any email address on the login page.
+In development, a credentials-based login is available.
+
+- Seeded credentials account: `test@dispatch.local` / `test`
+- You can also register a new local account from the login page.
 
 ## Useful Scripts
 - `npm run dev` — start the dev server
