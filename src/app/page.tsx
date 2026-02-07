@@ -1,9 +1,17 @@
-export default function Home() {
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+
+export default async function Home() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">Dispatch</h1>
-      <p className="mt-4 text-lg text-gray-600">
-        Your personal dispatch hub.
+    <main className="mx-auto max-w-5xl p-6">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <p className="mt-2 text-gray-600">
+        Welcome back, {session.user.name ?? "there"}.
       </p>
     </main>
   );

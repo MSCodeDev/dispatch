@@ -23,6 +23,7 @@
 Thumbs.db
 Desktop.ini
 *.pem
+nul
 
 # debug
 npm-debug.log*

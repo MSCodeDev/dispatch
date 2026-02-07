@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment
+
+- **OS**: Windows. Always use PowerShell-compatible commands — never use Unix/macOS-only commands (`rm`, `mkdir -p`, `cat`, `chmod`, etc.). Use `New-Item`, `Remove-Item`, `cmd.exe /c` for Windows-reserved filenames, and backslash paths.
+- **Shell**: PowerShell. Use `&&` only in `cmd.exe`; in PowerShell chain with `;` or use separate commands.
+
 ## Project Overview
 
 Dispatch is a locally-hosted personal web application built with Next.js (App Router), React, Tailwind CSS v4, SQLite via Drizzle ORM, and NextAuth.js for OAuth2 authentication. It exposes REST APIs consumed by the client-side UI.
@@ -17,6 +22,8 @@ npm run db:generate  # Generate Drizzle migrations from schema changes
 npm run db:migrate   # Run pending migrations
 npm run db:push      # Push schema directly to DB (dev shortcut, skips migration files)
 npm run db:studio    # Open Drizzle Studio GUI for the database
+npm test             # Run tests once (Vitest)
+npm run test:watch   # Run tests in watch mode
 ```
 
 ## Architecture
@@ -28,6 +35,7 @@ npm run db:studio    # Open Drizzle Studio GUI for the database
 - **Shared UI** (`src/components/`) — Reusable React components.
 - **Utilities** (`src/lib/`) — Shared helpers. `api.ts` provides `withAuth`, `jsonResponse`, and `errorResponse` for consistent API patterns.
 - **Drizzle migrations** (`drizzle/`) — Generated migration SQL files. Config in `drizzle.config.ts`.
+- **Tests** (`src/**/__tests__/`) — Vitest tests colocated with source. Test helpers in `src/test/` provide an in-memory SQLite database factory and auth mock. Config in `vitest.config.ts`.
 
 ## Key Patterns
 
@@ -36,3 +44,4 @@ npm run db:studio    # Open Drizzle Studio GUI for the database
 - All database schema changes go in `src/db/schema.ts`, then run `npm run db:generate` to create a migration.
 - Tailwind CSS v4 uses `@import "tailwindcss"` in CSS (no `tailwind.config.js` needed). PostCSS configured via `@tailwindcss/postcss` plugin.
 - Environment variables go in `.env.local` (gitignored). Auth secrets: `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`.
+- New API routes should have corresponding integration tests. Tests mock `@/auth` for session control and `@/db` with an in-memory SQLite instance from `src/test/db.ts`.

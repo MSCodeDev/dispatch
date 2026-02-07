@@ -1,0 +1,84 @@
+import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
+import { db } from "@/db";
+import { notes } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+/** GET /api/notes/[id] — get a single note */
+export const GET = withAuth(async (req, session, ctx) => {
+  const { id } = await (ctx as RouteContext).params;
+
+  const [note] = await db
+    .select()
+    .from(notes)
+    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
+
+  if (!note) {
+    return errorResponse("Note not found", 404);
+  }
+
+  return jsonResponse(note);
+});
+
+/** PUT /api/notes/[id] — update a note */
+export const PUT = withAuth(async (req, session, ctx) => {
+  const { id } = await (ctx as RouteContext).params;
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return errorResponse("Invalid JSON body", 400);
+  }
+
+  const { title, content } = body as Record<string, unknown>;
+
+  if (title !== undefined && (typeof title !== "string" || title.trim().length === 0)) {
+    return errorResponse("title must be a non-empty string", 400);
+  }
+
+  if (content !== undefined && typeof content !== "string") {
+    return errorResponse("content must be a string", 400);
+  }
+
+  // Check note exists and belongs to user
+  const [existing] = await db
+    .select({ id: notes.id })
+    .from(notes)
+    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
+
+  if (!existing) {
+    return errorResponse("Note not found", 404);
+  }
+
+  const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  if (title !== undefined) updates.title = (title as string).trim();
+  if (content !== undefined) updates.content = content;
+
+  const [updated] = await db
+    .update(notes)
+    .set(updates)
+    .where(eq(notes.id, id))
+    .returning();
+
+  return jsonResponse(updated);
+});
+
+/** DELETE /api/notes/[id] — delete a note */
+export const DELETE = withAuth(async (req, session, ctx) => {
+  const { id } = await (ctx as RouteContext).params;
+
+  const [existing] = await db
+    .select({ id: notes.id })
+    .from(notes)
+    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
+
+  if (!existing) {
+    return errorResponse("Note not found", 404);
+  }
+
+  await db.delete(notes).where(eq(notes.id, id));
+
+  return jsonResponse({ deleted: true });
+});
