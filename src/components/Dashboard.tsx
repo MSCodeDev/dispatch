@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { api, type Task, type Note, type TaskStatus, type ProjectWithStats } from "@/lib/client";
 import { PROJECT_COLORS } from "@/lib/projects";
 import {
-  IconPlus,
   IconDocument,
   IconCalendar,
   IconSearch,
@@ -20,7 +18,6 @@ const STATUS_BADGES: Record<TaskStatus, string> = {
 };
 
 export function Dashboard({ userName }: { userName: string }) {
-  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [projects, setProjects] = useState<ProjectWithStats[]>([]);
@@ -83,14 +80,9 @@ export function Dashboard({ userName }: { userName: string }) {
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 7);
   const weekStartTime = weekStart.getTime();
-  const doneThisWeek = tasks.filter(
-    (t) => t.status === "done" && new Date(t.updatedAt).getTime() >= weekStartTime,
-  ).length;
   const notesThisWeek = notes.filter(
     (n) => new Date(n.updatedAt).getTime() >= weekStartTime,
   ).length;
-  const backlogTasks = tasks.filter((t) => !t.dueDate && t.status !== "done").length;
-  const activeProjectsCount = projects.length;
   const upcoming = tasks
     .filter((t) => t.dueDate && t.dueDate > today && t.status !== "done")
     .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!))
@@ -214,69 +206,75 @@ export function Dashboard({ userName }: { userName: string }) {
         <p className="mt-1 text-neutral-500 dark:text-neutral-400">Welcome back, {userName}.</p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-in-up" style={{ animationDelay: "50ms" }}>
-        <QuickAction
-          label="New Task"
-          icon={IconPlus}
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("shortcut:new-task"));
-            router.push("/tasks");
-          }}
-          color="blue"
-        />
-        <QuickAction
-          label="New Note"
-          icon={IconDocument}
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("shortcut:new-note"));
-            router.push("/notes");
-          }}
-          color="purple"
-        />
-        <QuickAction
-          label="Dispatch"
-          icon={IconCalendar}
-          onClick={() => router.push("/dispatch")}
-          color="green"
-        />
-        <QuickAction
-          label="Search"
-          icon={IconSearch}
+      {/* Search */}
+      <div className="flex justify-end animate-fade-in-up" style={{ animationDelay: "50ms" }}>
+        <button
           onClick={() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }))}
-          color="neutral"
-        />
+          className="group relative flex items-center gap-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-900/50 dark:to-neutral-900 text-neutral-700 dark:text-neutral-300 px-4 py-2.5 text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 w-72"
+        >
+          <span
+            className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gradient-to-br from-neutral-200/70 via-transparent to-transparent dark:from-neutral-500/10 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+          />
+          <IconSearch className="w-5 h-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105" />
+          <span>Search</span>
+          <span className="ml-auto text-xs text-neutral-400 dark:text-neutral-500 font-mono">Ctrl+K</span>
+        </button>
       </div>
 
-      {/* Stats row with progress ring */}
+      {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-        <StatCard
-          label="Open Tasks"
-          count={openTasks.length}
-          color="blue"
-          href="/tasks?status=open"
-          icon={IconList}
-        />
-        <StatCard
-          label="Notes"
-          count={notes.length}
-          color="purple"
+        <Link
+          href="/tasks"
+          className="group relative overflow-hidden rounded-xl bg-blue-600 dark:bg-blue-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+        >
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-3xl font-bold text-white">{openTasks.length + inProgressTasks.length}</p>
+              <p className="text-sm font-medium mt-1 text-blue-100">Active Tasks</p>
+              <p className="mt-2 text-xs text-blue-200/80">{openTasks.length} open · {inProgressTasks.length} in progress</p>
+            </div>
+            <span className="rounded-lg p-2 bg-white/15 text-white transition-transform duration-300 group-hover:scale-105">
+              <IconList className="w-4 h-4" />
+            </span>
+          </div>
+        </Link>
+        <Link
           href="/notes"
-          icon={IconDocument}
-        />
-        <StatCard
-          label="Dispatches"
-          count={dispatchCount}
-          color="green"
+          className="group relative overflow-hidden rounded-xl bg-purple-600 dark:bg-purple-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+        >
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-3xl font-bold text-white">{notes.length}</p>
+              <p className="text-sm font-medium mt-1 text-purple-100">Notes</p>
+              <p className="mt-2 text-xs text-purple-200/80">{notesThisWeek} updated this week</p>
+            </div>
+            <span className="rounded-lg p-2 bg-white/15 text-white transition-transform duration-300 group-hover:scale-105">
+              <IconDocument className="w-4 h-4" />
+            </span>
+          </div>
+        </Link>
+        <Link
           href="/dispatch"
-          icon={IconCalendar}
-        />
-        <div className="group relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-white via-white to-emerald-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-emerald-950/40 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:border-emerald-200/70 dark:hover:border-emerald-700/40">
-          <div className="pointer-events-none absolute -top-10 right-6 h-24 w-24 rounded-full bg-emerald-400/20 blur-2xl dark:bg-emerald-500/20" />
-          <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-blue-300/20 blur-2xl dark:bg-blue-500/10" />
-          <div className="relative flex items-center justify-between gap-4">
+          className="group relative overflow-hidden rounded-xl bg-emerald-600 dark:bg-emerald-700 p-4 shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+        >
+          <span className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-3xl font-bold text-white">{dispatchCount}</p>
+              <p className="text-sm font-medium mt-1 text-emerald-100">Dispatches</p>
+              <p className="mt-2 text-xs text-emerald-200/80">View today&apos;s dispatch</p>
+            </div>
+            <span className="rounded-lg p-2 bg-white/15 text-white transition-transform duration-300 group-hover:scale-105">
+              <IconCalendar className="w-4 h-4" />
+            </span>
+          </div>
+        </Link>
+        <div className="group relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+          <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                 Deadline Focus
               </p>
               <p className="mt-1 text-2xl font-bold text-neutral-900 dark:text-white">
@@ -288,61 +286,21 @@ export function Dashboard({ userName }: { userName: string }) {
             </div>
             <FocusRing percent={focusPercent} toneClass={focusTone} label={focusLabel} />
           </div>
-          <div className="relative mt-3 grid grid-cols-3 gap-2 text-[11px] font-medium">
-            <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-red-700 dark:border-red-900/60 dark:bg-red-900/30 dark:text-red-300">
-              Overdue {overdue.length}
+          <div className="mt-3 flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              <span className={overdue.length > 0 ? "font-semibold text-red-600 dark:text-red-400" : "text-neutral-400 dark:text-neutral-500"}>{overdue.length} overdue</span>
             </span>
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700 dark:border-amber-900/60 dark:bg-amber-900/30 dark:text-amber-300">
-              Due today {dueToday.length}
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className={dueToday.length > 0 ? "font-semibold text-amber-600 dark:text-amber-400" : "text-neutral-400 dark:text-neutral-500"}>{dueToday.length} today</span>
             </span>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-900/30 dark:text-emerald-300">
-              Due soon {dueSoon.length}
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className={dueSoon.length > 0 ? "font-semibold text-emerald-600 dark:text-emerald-400" : "text-neutral-400 dark:text-neutral-500"}>{dueSoon.length} soon</span>
             </span>
           </div>
         </div>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 animate-fade-in-up" style={{ animationDelay: "120ms" }}>
-        <InsightCard
-          label="In Progress"
-          value={inProgressTasks.length}
-          tone="amber"
-          subtext="Active tasks"
-          href="/tasks?status=in_progress"
-        />
-        <InsightCard
-          label="Overdue"
-          value={overdue.length}
-          tone="red"
-          subtext="Needs attention"
-        />
-        <InsightCard
-          label="Done (7d)"
-          value={doneThisWeek}
-          tone="emerald"
-          subtext="Closed this week"
-        />
-        <InsightCard
-          label="Notes (7d)"
-          value={notesThisWeek}
-          tone="violet"
-          subtext="Updated this week"
-          href="/notes"
-        />
-        <InsightCard
-          label="Backlog"
-          value={backlogTasks}
-          tone="slate"
-          subtext="No due date"
-        />
-        <InsightCard
-          label="Active Projects"
-          value={activeProjectsCount}
-          tone="blue"
-          subtext="In flight"
-          href="/projects"
-        />
       </div>
 
       {/* Project signals */}
@@ -534,50 +492,6 @@ export function Dashboard({ userName }: { userName: string }) {
   );
 }
 
-function QuickAction({
-  label,
-  icon: Icon,
-  onClick,
-  color,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  onClick: () => void;
-  color: "blue" | "purple" | "green" | "neutral";
-}) {
-  const colors = {
-    blue: {
-      base: "text-blue-700 dark:text-blue-300 bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-neutral-900 border-blue-200/80 dark:border-blue-800/60",
-      glow: "from-blue-200/70 via-transparent to-transparent dark:from-blue-500/20",
-    },
-    purple: {
-      base: "text-purple-700 dark:text-purple-300 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-neutral-900 border-purple-200/80 dark:border-purple-800/60",
-      glow: "from-purple-200/70 via-transparent to-transparent dark:from-purple-500/20",
-    },
-    green: {
-      base: "text-emerald-700 dark:text-emerald-300 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-neutral-900 border-emerald-200/80 dark:border-emerald-800/60",
-      glow: "from-emerald-200/70 via-transparent to-transparent dark:from-emerald-500/20",
-    },
-    neutral: {
-      base: "text-neutral-700 dark:text-neutral-300 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-900/50 dark:to-neutral-900 border-neutral-200 dark:border-neutral-700",
-      glow: "from-neutral-200/70 via-transparent to-transparent dark:from-neutral-500/10",
-    },
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`group relative flex items-center gap-2.5 rounded-xl border p-3.5 text-sm font-medium transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 ${colors[color].base}`}
-    >
-      <span
-        className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gradient-to-br ${colors[color].glow} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100`}
-      />
-      <Icon className="w-5 h-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105" />
-      {label}
-    </button>
-  );
-}
-
 function FocusRing({
   percent,
   toneClass,
@@ -625,161 +539,6 @@ function FocusRing({
       </text>
     </svg>
   );
-}
-
-function StatCard({
-  label,
-  count,
-  color,
-  href,
-  icon: Icon,
-}: {
-  label: string;
-  count: number;
-  color: "blue" | "yellow" | "green" | "purple";
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}) {
-  const colors = {
-    blue: {
-      text: "text-blue-700 dark:text-blue-300",
-      accent: "bg-blue-500",
-      border: "border-blue-200/80 dark:border-blue-800/60",
-      glow: "bg-blue-400/20 dark:bg-blue-500/10",
-      iconBg: "bg-blue-50 dark:bg-blue-900/30",
-      iconText: "text-blue-600 dark:text-blue-300",
-      hover: "hover:border-blue-300/80 dark:hover:border-blue-500/40",
-    },
-    yellow: {
-      text: "text-amber-700 dark:text-amber-300",
-      accent: "bg-amber-500",
-      border: "border-amber-200/80 dark:border-amber-800/60",
-      glow: "bg-amber-400/20 dark:bg-amber-500/10",
-      iconBg: "bg-amber-50 dark:bg-amber-900/30",
-      iconText: "text-amber-600 dark:text-amber-300",
-      hover: "hover:border-amber-300/80 dark:hover:border-amber-500/40",
-    },
-    green: {
-      text: "text-emerald-700 dark:text-emerald-300",
-      accent: "bg-emerald-500",
-      border: "border-emerald-200/80 dark:border-emerald-800/60",
-      glow: "bg-emerald-400/20 dark:bg-emerald-500/10",
-      iconBg: "bg-emerald-50 dark:bg-emerald-900/30",
-      iconText: "text-emerald-600 dark:text-emerald-300",
-      hover: "hover:border-emerald-300/80 dark:hover:border-emerald-500/40",
-    },
-    purple: {
-      text: "text-purple-700 dark:text-purple-300",
-      accent: "bg-purple-500",
-      border: "border-purple-200/80 dark:border-purple-800/60",
-      glow: "bg-purple-400/20 dark:bg-purple-500/10",
-      iconBg: "bg-purple-50 dark:bg-purple-900/30",
-      iconText: "text-purple-600 dark:text-purple-300",
-      hover: "hover:border-purple-300/80 dark:hover:border-purple-500/40",
-    },
-  };
-  return (
-    <Link
-      href={href}
-      className={`group relative overflow-hidden rounded-xl border bg-white dark:bg-neutral-900 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-95 ${colors[color].border} ${colors[color].hover}`}
-    >
-      <span className={`absolute inset-x-0 top-0 h-0.5 ${colors[color].accent}`} />
-      <span
-        className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${colors[color].glow} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100`}
-      />
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className={`text-3xl font-bold ${colors[color].text}`}>{count}</p>
-          <p className="text-sm font-medium mt-1 text-neutral-600 dark:text-neutral-300">{label}</p>
-          <p className="mt-2 text-[11px] text-neutral-400 dark:text-neutral-500">View details</p>
-        </div>
-        <span
-          className={`rounded-lg p-2 ${colors[color].iconBg} ${colors[color].iconText} transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105`}
-        >
-          <Icon className="w-4 h-4" />
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function InsightCard({
-  label,
-  value,
-  subtext,
-  tone,
-  href,
-}: {
-  label: string;
-  value: number;
-  subtext: string;
-  tone: "amber" | "red" | "emerald" | "violet" | "slate" | "blue";
-  href?: string;
-}) {
-  const tones = {
-    amber: {
-      dot: "bg-amber-500",
-      border: "border-amber-200/70 dark:border-amber-900/50",
-      text: "text-amber-700 dark:text-amber-300",
-      glow: "from-amber-200/70 via-transparent to-transparent dark:from-amber-500/20",
-    },
-    red: {
-      dot: "bg-red-500",
-      border: "border-red-200/70 dark:border-red-900/50",
-      text: "text-red-700 dark:text-red-300",
-      glow: "from-red-200/70 via-transparent to-transparent dark:from-red-500/20",
-    },
-    emerald: {
-      dot: "bg-emerald-500",
-      border: "border-emerald-200/70 dark:border-emerald-900/50",
-      text: "text-emerald-700 dark:text-emerald-300",
-      glow: "from-emerald-200/70 via-transparent to-transparent dark:from-emerald-500/20",
-    },
-    violet: {
-      dot: "bg-violet-500",
-      border: "border-violet-200/70 dark:border-violet-900/50",
-      text: "text-violet-700 dark:text-violet-300",
-      glow: "from-violet-200/70 via-transparent to-transparent dark:from-violet-500/20",
-    },
-    slate: {
-      dot: "bg-slate-500",
-      border: "border-slate-200/70 dark:border-slate-900/50",
-      text: "text-slate-700 dark:text-slate-300",
-      glow: "from-slate-200/70 via-transparent to-transparent dark:from-slate-500/20",
-    },
-    blue: {
-      dot: "bg-blue-500",
-      border: "border-blue-200/70 dark:border-blue-900/50",
-      text: "text-blue-700 dark:text-blue-300",
-      glow: "from-blue-200/70 via-transparent to-transparent dark:from-blue-500/20",
-    },
-  };
-
-  const content = (
-    <>
-      <span
-        className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-gradient-to-br ${tones[tone].glow} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100`}
-      />
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-500 dark:text-neutral-400">
-        <span className={`h-2 w-2 rounded-full ${tones[tone].dot}`} />
-        {label}
-      </div>
-      <div className={`mt-1 text-2xl font-bold ${tones[tone].text}`}>{value}</div>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">{subtext}</p>
-    </>
-  );
-
-  const baseClass = `group relative overflow-hidden rounded-xl border bg-white dark:bg-neutral-900 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${tones[tone].border}`;
-
-  if (href) {
-    return (
-      <Link href={href} className={baseClass}>
-        {content}
-      </Link>
-    );
-  }
-
-  return <div className={baseClass}>{content}</div>;
 }
 
 function DueItem({
