@@ -43,6 +43,34 @@ export const sessions = sqliteTable("session", {
 
 // --- Domain tables ---
 
+export const projects = sqliteTable(
+  "project",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    status: text("status", { enum: ["active", "paused", "completed"] })
+      .notNull()
+      .default("active"),
+    color: text("color").notNull().default("blue"),
+    createdAt: text("createdAt")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updatedAt")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("project_userId_idx").on(table.userId),
+    index("project_status_idx").on(table.status),
+  ]
+);
+
 export const tasks = sqliteTable(
   "task",
   {
@@ -52,6 +80,7 @@ export const tasks = sqliteTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    projectId: text("projectId").references(() => projects.id, { onDelete: "set null" }),
     title: text("title").notNull(),
     description: text("description"),
     status: text("status", { enum: ["open", "in_progress", "done"] })
@@ -70,6 +99,7 @@ export const tasks = sqliteTable(
   },
   (table) => [
     index("task_userId_idx").on(table.userId),
+    index("task_projectId_idx").on(table.projectId),
     index("task_status_idx").on(table.status),
     index("task_priority_idx").on(table.priority),
   ]

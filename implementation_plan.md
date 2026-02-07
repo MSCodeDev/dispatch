@@ -164,12 +164,12 @@ Targeted UX fixes and navigation balance across dashboard, tasks, and sidebar.
 
 Introduce Projects as first-class groupings of tasks, tighten task/project synergy, and expand the Profile page.
 
-- [ ] **10.1** Design the `projects` table schema (id, userId, name, description, status, color, createdAt, updatedAt) and add `projectId` (nullable) to `tasks` with indexes.
-- [ ] **10.2** Generate and run a Drizzle migration for `projects` and the `tasks.projectId` column.
-- [ ] **10.3** Implement `/api/projects` CRUD and `/api/projects/[id]` endpoints; add `/api/projects/[id]/tasks` to list tasks by project; update `/api/tasks` to accept `projectId` filters and updates.
-- [ ] **10.4** Update Tasks UI to reflect project synergy: project filters, project badges in rows, and project-aware creation/edit flows.
-- [ ] **10.5** Build the Projects page: list + create/edit, project detail view with task list, stats, and quick actions.
-- [ ] **10.6** Add a collapsible "Projects" section in the sidebar that shows active projects (with counts) and highlights the current project.
-- [ ] **10.7** Add project signals to the dashboard (active project progress, recent project activity) without overpowering tasks/notes.
-- [ ] **10.8** Expand the Profile page content (account details, usage stats for tasks/notes/projects, preferences, and shortcuts).
-- [ ] **10.9** Add tests for projects API routes and tasks/projects integration (filters, assignment, ownership).
+- [x] **10.1** Design the `projects` table schema (id, userId, name, description, status, color, createdAt, updatedAt) and add `projectId` (nullable) to `tasks` with indexes.
+- [x] **10.2** Generate and run a Drizzle migration for `projects` and the `tasks.projectId` column.
+- [x] **10.3** Implement `/api/projects` CRUD and `/api/projects/[id]` endpoints; add `/api/projects/[id]/tasks` to list tasks by project; update `/api/tasks` to accept `projectId` filters and updates.
+- [x] **10.4** Update Tasks UI to reflect project synergy: project filters, project badges in rows, and project-aware creation/edit flows.
+- [x] **10.5** Build the Projects page: list + create/edit, project detail view with task list, stats, and quick actions.
+- [x] **10.6** Add a collapsible "Projects" section in the sidebar that shows active projects (with counts) and highlights the current project.
+- [x] **10.7** Add project signals to the dashboard (active project progress, recent project activity) without overpowering tasks/notes.
+- [x] **10.8** Expand the Profile page content (account details, usage stats for tasks/notes/projects, preferences, and shortcuts).
+- [x] **10.9** Add tests for projects API routes and tasks/projects integration (filters, assignment, ownership).

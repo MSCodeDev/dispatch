@@ -1,8 +1,8 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
-import { tasks } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { tasks, projects } from "@/db/schema";
+import { eq, and, sql, isNull } from "drizzle-orm";
 
 const VALID_STATUSES = ["open", "in_progress", "done"] as const;
 const VALID_PRIORITIES = ["low", "medium", "high"] as const;
@@ -12,6 +12,7 @@ export const GET = withAuth(async (req, session) => {
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const priority = url.searchParams.get("priority");
+  const projectId = url.searchParams.get("projectId");
 
   const conditions = [eq(tasks.userId, session.user!.id!)];
 
@@ -27,6 +28,14 @@ export const GET = withAuth(async (req, session) => {
       return errorResponse(`Invalid priority. Must be one of: ${VALID_PRIORITIES.join(", ")}`, 400);
     }
     conditions.push(eq(tasks.priority, priority as typeof VALID_PRIORITIES[number]));
+  }
+
+  if (projectId) {
+    if (projectId === "none") {
+      conditions.push(isNull(tasks.projectId));
+    } else {
+      conditions.push(eq(tasks.projectId, projectId));
+    }
   }
 
   const where = and(...conditions);
@@ -67,7 +76,7 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { title, description, status, priority, dueDate } = body as Record<string, unknown>;
+  const { title, description, status, priority, dueDate, projectId } = body as Record<string, unknown>;
 
   if (!title || typeof title !== "string" || title.trim().length === 0) {
     return errorResponse("title is required and must be a non-empty string", 400);
@@ -101,12 +110,31 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("dueDate must be a string (ISO date)", 400);
   }
 
+  if (projectId !== undefined && projectId !== null && typeof projectId !== "string") {
+    return errorResponse("projectId must be a string or null", 400);
+  }
+
+  let resolvedProjectId: string | null | undefined = undefined;
+  if (projectId === null) {
+    resolvedProjectId = null;
+  } else if (projectId !== undefined) {
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.id, projectId as string), eq(projects.userId, session.user!.id!)));
+    if (!project) {
+      return errorResponse("projectId does not match an existing project", 400);
+    }
+    resolvedProjectId = projectId as string;
+  }
+
   const now = new Date().toISOString();
 
   const [task] = await db
     .insert(tasks)
     .values({
       userId: session.user!.id!,
+      projectId: resolvedProjectId ?? null,
       title: (title as string).trim(),
       description: description as string | undefined,
       status: (status as typeof VALID_STATUSES[number]) ?? "open",

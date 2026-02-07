@@ -19,6 +19,7 @@ const {
   PUT,
   DELETE,
 } = await import("@/app/api/tasks/[id]/route");
+const { POST: CREATE_PROJECT } = await import("@/app/api/projects/route");
 
 const TEST_USER = { id: "user-1", name: "Test User", email: "test@test.com" };
 const OTHER_USER = { id: "user-2", name: "Other User", email: "other@test.com" };
@@ -543,6 +544,143 @@ describe("Tasks API", () => {
         ctx(created.id)
       );
       expect(res.status).toBe(404);
+    });
+  });
+
+  // --- Project integration ---
+
+  describe("project integration", () => {
+    it("filters by projectId", async () => {
+      const projectRes = await CREATE_PROJECT(
+        jsonReq("http://localhost/api/projects", "POST", { name: "Project A" }),
+        {}
+      );
+      const project = await projectRes.json();
+
+      await POST(
+        jsonReq("http://localhost/api/tasks", "POST", {
+          title: "Project task",
+          projectId: project.id,
+        }),
+        {}
+      );
+      await POST(
+        jsonReq("http://localhost/api/tasks", "POST", { title: "Unassigned" }),
+        {}
+      );
+
+      const res = await GET(
+        new Request(`http://localhost/api/tasks?projectId=${project.id}`),
+        {}
+      );
+      const data = await res.json();
+      expect(data).toHaveLength(1);
+      expect(data[0].title).toBe("Project task");
+    });
+
+    it("filters unassigned tasks with projectId=none", async () => {
+      const projectRes = await CREATE_PROJECT(
+        jsonReq("http://localhost/api/projects", "POST", { name: "Project B" }),
+        {}
+      );
+      const project = await projectRes.json();
+
+      await POST(
+        jsonReq("http://localhost/api/tasks", "POST", {
+          title: "Assigned",
+          projectId: project.id,
+        }),
+        {}
+      );
+      await POST(
+        jsonReq("http://localhost/api/tasks", "POST", { title: "Unassigned" }),
+        {}
+      );
+
+      const res = await GET(
+        new Request("http://localhost/api/tasks?projectId=none"),
+        {}
+      );
+      const data = await res.json();
+      expect(data).toHaveLength(1);
+      expect(data[0].title).toBe("Unassigned");
+    });
+
+    it("rejects invalid projectId on create", async () => {
+      const res = await POST(
+        jsonReq("http://localhost/api/tasks", "POST", {
+          title: "Bad project",
+          projectId: "missing",
+        }),
+        {}
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it("allows updating projectId", async () => {
+      const projectRes = await CREATE_PROJECT(
+        jsonReq("http://localhost/api/projects", "POST", { name: "Project C" }),
+        {}
+      );
+      const project = await projectRes.json();
+
+      const taskRes = await POST(
+        jsonReq("http://localhost/api/tasks", "POST", { title: "Move me" }),
+        {}
+      );
+      const task = await taskRes.json();
+
+      const res = await PUT(
+        jsonReq(`http://localhost/api/tasks/${task.id}`, "PUT", {
+          projectId: project.id,
+        }),
+        ctx(task.id)
+      );
+      const data = await res.json();
+      expect(data.projectId).toBe(project.id);
+    });
+
+    it("rejects assigning another user's project", async () => {
+      mockSession({ user: OTHER_USER });
+      const otherProjectRes = await CREATE_PROJECT(
+        jsonReq("http://localhost/api/projects", "POST", { name: "Other Project" }),
+        {}
+      );
+      const otherProject = await otherProjectRes.json();
+
+      mockSession({ user: TEST_USER });
+      const res = await POST(
+        jsonReq("http://localhost/api/tasks", "POST", {
+          title: "Bad assignment",
+          projectId: otherProject.id,
+        }),
+        {}
+      );
+      expect(res.status).toBe(400);
+    });
+
+    it("rejects updating to another user's project", async () => {
+      const taskRes = await POST(
+        jsonReq("http://localhost/api/tasks", "POST", { title: "Mine" }),
+        {}
+      );
+      const task = await taskRes.json();
+
+      mockSession({ user: OTHER_USER });
+      const otherProjectRes = await CREATE_PROJECT(
+        jsonReq("http://localhost/api/projects", "POST", { name: "Other Project" }),
+        {}
+      );
+      const otherProject = await otherProjectRes.json();
+
+      mockSession({ user: TEST_USER });
+      const res = await PUT(
+        jsonReq(`http://localhost/api/tasks/${task.id}`, "PUT", {
+          projectId: otherProject.id,
+        }),
+        ctx(task.id)
+      );
+      expect(res.status).toBe(400);
     });
   });
 });
