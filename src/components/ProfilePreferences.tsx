@@ -2,17 +2,26 @@
 
 import { useTheme } from "@/components/ThemeProvider";
 import { IconSun, IconMoon } from "@/components/icons";
+import { signOut } from "next-auth/react";
 
 export function ProfilePreferences() {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-4">
-      <div>
-        <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Preferences</h2>
-        <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-          Personalize how Dispatch looks and feels.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Preferences</h2>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+            Personalize how Dispatch looks and feels.
+          </p>
+        </div>
+        <button
+          onClick={() => signOut()}
+          className="rounded-lg border border-red-200 dark:border-red-900/50 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all active:scale-95"
+        >
+          Sign Out
+        </button>
       </div>
 
       <div className="flex items-center justify-between rounded-lg border border-neutral-200 dark:border-neutral-800 px-4 py-3">
