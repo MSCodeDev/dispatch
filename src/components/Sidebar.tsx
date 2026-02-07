@@ -91,7 +91,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps) {
       <div className="px-3 pt-4 pb-2 flex-shrink-0">
         <button
           onClick={onSearchOpen}
-          className={`flex items-center gap-2 w-full rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-500 transition-colors hover:border-neutral-700 hover:text-neutral-400 ${
+          className={`flex items-center gap-2 w-full rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-500 transition-all hover:border-neutral-700 hover:text-neutral-400 active:scale-95 ${
             collapsed ? "px-2.5 py-2 justify-center" : "px-3 py-2"
           }`}
         >
@@ -147,7 +147,7 @@ export function Sidebar({ onSearchOpen }: SidebarProps) {
                     <Link
                       href={item.href}
                       title={collapsed ? item.label : undefined}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
                         active
                           ? "bg-neutral-800/60 text-white"
                           : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
@@ -224,14 +224,14 @@ export function Sidebar({ onSearchOpen }: SidebarProps) {
                 <button
                   onClick={toggleTheme}
                   title={collapsed ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : undefined}
-                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-colors ${
+                  className={`flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200 transition-all active:scale-[0.97] ${
                     collapsed ? "justify-center px-2" : ""
                   }`}
                 >
                   {theme === "dark" ? (
-                    <IconSun className="w-5 h-5 flex-shrink-0" />
+                    <IconSun key="sun" className="w-5 h-5 flex-shrink-0 animate-icon-spin-in" />
                   ) : (
-                    <IconMoon className="w-5 h-5 flex-shrink-0" />
+                    <IconMoon key="moon" className="w-5 h-5 flex-shrink-0 animate-icon-spin-in" />
                   )}
                   <span
                     className={`whitespace-nowrap transition-all duration-300 ${

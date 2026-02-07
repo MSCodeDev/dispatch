@@ -10,7 +10,9 @@ import {
 } from "@/lib/client";
 import { TaskModal } from "@/components/TaskModal";
 import { Pagination } from "@/components/Pagination";
+import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
+import { IconPlus, IconPencil, IconTrash } from "@/components/icons";
 
 type SortField = "createdAt" | "dueDate" | "priority";
 
@@ -38,6 +40,8 @@ export function TasksPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [flashingId, setFlashingId] = useState<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -109,9 +113,11 @@ export function TasksPage() {
           ? "done"
           : "open";
 
+    setFlashingId(task.id);
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)),
     );
+    setTimeout(() => setFlashingId(null), 600);
 
     try {
       await api.tasks.update(task.id, { status: next });
@@ -126,15 +132,19 @@ export function TasksPage() {
   }
 
   async function handleDelete(id: string) {
-    const prev = tasks;
-    setTasks((t) => t.filter((x) => x.id !== id));
-    try {
-      await api.tasks.delete(id);
-      toast.success("Task deleted");
-    } catch {
-      setTasks(prev);
-      toast.error("Failed to delete task");
-    }
+    setDeletingId(id);
+    setTimeout(async () => {
+      const prev = tasks;
+      setTasks((t) => t.filter((x) => x.id !== id));
+      setDeletingId(null);
+      try {
+        await api.tasks.delete(id);
+        toast.success("Task deleted");
+      } catch {
+        setTasks(prev);
+        toast.error("Failed to delete task");
+      }
+    }, 300);
   }
 
   function handleSaved() {
@@ -144,90 +154,136 @@ export function TasksPage() {
     toast.success("Task saved");
   }
 
+  // Compute stats
+  const openCount = tasks.filter((t) => t.status === "open").length;
+  const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+
+  const statusFilterOptions = [
+    { value: "", label: "All statuses" },
+    { value: "open", label: "Open", dot: "bg-blue-500" },
+    { value: "in_progress", label: "In Progress", dot: "bg-yellow-500" },
+    { value: "done", label: "Done", dot: "bg-green-500" },
+  ];
+
+  const priorityFilterOptions = [
+    { value: "", label: "All priorities" },
+    { value: "high", label: "High", dot: "bg-red-500" },
+    { value: "medium", label: "Medium", dot: "bg-yellow-500" },
+    { value: "low", label: "Low", dot: "bg-neutral-400" },
+  ];
+
+  const sortOptions = [
+    { value: "createdAt", label: "Newest" },
+    { value: "dueDate", label: "Due Date" },
+    { value: "priority", label: "Priority" },
+  ];
+
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold dark:text-white">Tasks</h1>
+        <div>
+          <h1 className="text-2xl font-bold dark:text-white">Tasks</h1>
+          {!loading && tasks.length > 0 && (
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+              <span className="text-blue-600 dark:text-blue-400 font-medium">{openCount} open</span>
+              <span className="mx-1.5">&middot;</span>
+              <span className="text-yellow-600 dark:text-yellow-400 font-medium">{inProgressCount} in progress</span>
+              <span className="mx-1.5">&middot;</span>
+              <span className="text-green-600 dark:text-green-400 font-medium">{doneCount} done</span>
+            </p>
+          )}
+        </div>
         <button
           onClick={() => {
             setEditingTask(null);
             setModalOpen(true);
           }}
-          className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5 shadow-sm"
         >
+          <IconPlus className="w-4 h-4" />
           New Task
         </button>
       </div>
 
       {/* Filters & sort */}
-      <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "")}
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm dark:text-neutral-200"
-        >
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="done">Done</option>
-        </select>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-40">
+          <CustomSelect
+            label=""
+            value={statusFilter}
+            onChange={(v: string) => setStatusFilter(v as TaskStatus | "")}
+            options={statusFilterOptions}
+          />
+        </div>
 
-        <select
-          value={priorityFilter}
-          onChange={(e) =>
-            setPriorityFilter(e.target.value as TaskPriority | "")
-          }
-          className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm dark:text-neutral-200"
-        >
-          <option value="">All priorities</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+        <div className="w-40">
+          <CustomSelect
+            label=""
+            value={priorityFilter}
+            onChange={(v: string) => setPriorityFilter(v as TaskPriority | "")}
+            options={priorityFilterOptions}
+          />
+        </div>
 
-        <div className="ml-auto flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <span>Sort:</span>
-          <select
+        <div className="ml-auto w-36">
+          <CustomSelect
+            label=""
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortField)}
-            className="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm dark:text-neutral-200"
-          >
-            <option value="createdAt">Newest</option>
-            <option value="dueDate">Due Date</option>
-            <option value="priority">Priority</option>
-          </select>
+            onChange={(v: string) => setSortBy(v as SortField)}
+            options={sortOptions}
+          />
         </div>
       </div>
 
       {/* Task list */}
       {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
+        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden">
+          {[1, 2, 3, 4, 5].map((i) => (
             <div
               key={i}
-              className="h-16 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-800"
-            />
+              className={`flex items-center gap-3 p-4 ${i > 1 ? "border-t border-neutral-100 dark:border-neutral-800/50" : ""}`}
+            >
+              <div className="w-3 h-3 rounded-full skeleton-shimmer" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-48 rounded skeleton-shimmer" />
+                <div className="h-3 w-32 rounded skeleton-shimmer" />
+              </div>
+              <div className="h-5 w-14 rounded-full skeleton-shimmer" />
+            </div>
           ))}
         </div>
       ) : sorted.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-300 dark:border-neutral-700 p-12 text-center text-neutral-400 dark:text-neutral-500">
-          No tasks found.{" "}
-          <button
-            onClick={() => {
-              setEditingTask(null);
-              setModalOpen(true);
-            }}
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            Create one
-          </button>
+        <div className="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 p-16 text-center">
+          <IconInboxEmpty className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
+          <p className="text-neutral-500 dark:text-neutral-400 font-medium">No tasks found</p>
+          <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1 mb-4">
+            {statusFilter || priorityFilter
+              ? "Try adjusting your filters."
+              : "Create your first task to get started."}
+          </p>
+          {!statusFilter && !priorityFilter && (
+            <button
+              onClick={() => {
+                setEditingTask(null);
+                setModalOpen(true);
+              }}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5"
+            >
+              <IconPlus className="w-4 h-4" />
+              Create Task
+            </button>
+          )}
         </div>
       ) : (
-        <ul className="space-y-2">
-          {sorted.map((task) => (
+        <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 overflow-hidden shadow-sm">
+          {sorted.map((task, i) => (
             <TaskRow
               key={task.id}
               task={task}
+              index={i}
+              isDeleting={deletingId === task.id}
+              isFlashing={flashingId === task.id}
               onStatusToggle={() => handleStatusToggle(task)}
               onEdit={() => {
                 setEditingTask(task);
@@ -236,7 +292,7 @@ export function TasksPage() {
               onDelete={() => handleDelete(task.id)}
             />
           ))}
-        </ul>
+        </div>
       )}
 
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -257,10 +313,18 @@ export function TasksPage() {
 
 // ---- Sub-components ----
 
-const STATUS_STYLES: Record<TaskStatus, { dot: string; label: string }> = {
-  open: { dot: "bg-blue-500", label: "Open" },
-  in_progress: { dot: "bg-yellow-500", label: "In Progress" },
-  done: { dot: "bg-green-500", label: "Done" },
+function IconInboxEmpty({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-17.5 0a2.25 2.25 0 0 0-2.25 2.25v1.5a2.25 2.25 0 0 0 2.25 2.25h15.5a2.25 2.25 0 0 0 2.25-2.25v-1.5a2.25 2.25 0 0 0-2.25-2.25m-17.5 0V6.75A2.25 2.25 0 0 1 4.5 4.5h15A2.25 2.25 0 0 1 21.75 6.75v6.75" />
+    </svg>
+  );
+}
+
+const STATUS_STYLES: Record<TaskStatus, { dot: string; label: string; ring: string }> = {
+  open: { dot: "bg-blue-500", label: "Open", ring: "text-blue-500" },
+  in_progress: { dot: "bg-yellow-500", label: "In Progress", ring: "text-yellow-500" },
+  done: { dot: "bg-green-500", label: "Done", ring: "text-green-500" },
 };
 
 const PRIORITY_BADGE: Record<TaskPriority, string> = {
@@ -271,31 +335,55 @@ const PRIORITY_BADGE: Record<TaskPriority, string> = {
 
 function TaskRow({
   task,
+  index,
+  isDeleting,
+  isFlashing,
   onStatusToggle,
   onEdit,
   onDelete,
 }: {
   task: Task;
+  index: number;
+  isDeleting: boolean;
+  isFlashing: boolean;
   onStatusToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const [ringKey, setRingKey] = useState(0);
+
+  function handleStatusClick() {
+    setRingKey((k) => k + 1);
+    onStatusToggle();
+  }
+
   return (
     <li
-      className={`flex items-center gap-3 rounded-lg border bg-white dark:bg-neutral-900 p-4 transition-colors ${
-        task.status === "done"
-          ? "border-neutral-100 dark:border-neutral-800 opacity-60"
-          : "border-neutral-200 dark:border-neutral-800"
-      }`}
+      className={`group flex items-center gap-3 p-4 transition-all duration-200 ${
+        index > 0 ? "border-t border-neutral-100 dark:border-neutral-800/50" : ""
+      } ${
+        task.status === "done" ? "opacity-60" : ""
+      } ${
+        isDeleting ? "animate-slide-out-right overflow-hidden" : ""
+      } ${
+        isFlashing ? "animate-row-flash" : ""
+      } hover:bg-neutral-50 dark:hover:bg-neutral-800/30`}
+      style={{ listStyle: "none" }}
     >
       <button
-        onClick={onStatusToggle}
+        onClick={handleStatusClick}
         title={`Status: ${STATUS_STYLES[task.status].label} (click to cycle)`}
-        className="flex-shrink-0"
+        className="flex-shrink-0 relative"
       >
         <span
-          className={`block h-3 w-3 rounded-full ${STATUS_STYLES[task.status].dot}`}
+          className={`block h-3 w-3 rounded-full ${STATUS_STYLES[task.status].dot} transition-colors`}
         />
+        {ringKey > 0 && (
+          <span
+            key={ringKey}
+            className={`absolute inset-0 rounded-full animate-status-ring ${STATUS_STYLES[task.status].ring}`}
+          />
+        )}
       </button>
 
       <div className="flex-1 min-w-0">
@@ -323,18 +411,23 @@ function TaskRow({
         </span>
       )}
 
-      <button
-        onClick={onEdit}
-        className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
-      >
-        Edit
-      </button>
-      <button
-        onClick={onDelete}
-        className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
-      >
-        Delete
-      </button>
+      {/* Action buttons - visible on hover */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onEdit}
+          className="rounded-md p-1.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+          title="Edit task"
+        >
+          <IconPencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={onDelete}
+          className="rounded-md p-1.5 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:scale-95 transition-all"
+          title="Delete task"
+        >
+          <IconTrash className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </li>
   );
 }
