@@ -8,8 +8,8 @@ import {
   type TaskPriority,
   type Project,
 } from "@/lib/client";
-import { CustomSelect } from "@/components/CustomSelect";
 import { PROJECT_COLORS } from "@/lib/projects";
+import { CustomSelect } from "@/components/CustomSelect";
 
 export function TaskModal({
   task,
@@ -121,7 +121,7 @@ export function TaskModal({
       {/* Modal */}
       <form
         onSubmit={handleSubmit}
-        className="relative w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-4 animate-modal-enter"
+        className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-4 animate-modal-enter"
       >
         <h2 className="text-lg font-semibold dark:text-white">
           {isEditing ? "Edit Task" : "New Task"}
@@ -158,20 +158,34 @@ export function TaskModal({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <CustomSelect
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <PillGroup
             label="Status"
             value={status}
-            onChange={(v: string) => setStatus(v as TaskStatus)}
             options={statusOptions}
+            onChange={(v) => setStatus(v as TaskStatus)}
           />
 
-          <CustomSelect
+          <PillGroup
             label="Priority"
             value={priority}
-            onChange={(v: string) => setPriority(v as TaskPriority)}
             options={priorityOptions}
+            onChange={(v) => setPriority(v as TaskPriority)}
           />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-[0.8fr_1.2fr] gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Due Date
+            </p>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
+            />
+          </div>
 
           <CustomSelect
             label="Project"
@@ -179,18 +193,6 @@ export function TaskModal({
             onChange={(v: string) => setProjectId(v)}
             options={projectOptions}
           />
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Due Date
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
-            />
-          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
@@ -213,6 +215,49 @@ export function TaskModal({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+type PillOption = { value: string; label: string; dot?: string };
+
+function PillGroup({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: PillOption[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+        {label}
+      </p>
+      <div className="mt-2 flex flex-nowrap gap-2 overflow-x-auto">
+        {options.map((option) => {
+          const active = value === option.value;
+          return (
+            <button
+              key={`${label}-${option.value}`}
+              type="button"
+              onClick={() => onChange(option.value)}
+              aria-pressed={active}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                active
+                  ? "border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-900"
+                  : "border-neutral-200 bg-white/80 text-neutral-600 hover:text-neutral-900 hover:border-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:text-white dark:hover:border-neutral-500"
+              }`}
+            >
+              {option.dot && <span className={`h-2.5 w-2.5 rounded-full ${option.dot}`} />}
+              <span>{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
