@@ -1,7 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { notes } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -12,7 +12,7 @@ export const GET = withAuth(async (req, session, ctx) => {
   const [note] = await db
     .select()
     .from(notes)
-    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
+    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!), isNull(notes.deletedAt)));
 
   if (!note) {
     return errorResponse("Note not found", 404);
@@ -50,11 +50,11 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("content must be at most 100000 characters", 400);
   }
 
-  // Check note exists and belongs to user
+  // Check note exists, belongs to user, and is not soft-deleted
   const [existing] = await db
     .select({ id: notes.id })
     .from(notes)
-    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
+    .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!), isNull(notes.deletedAt)));
 
   if (!existing) {
     return errorResponse("Note not found", 404);
@@ -73,20 +73,23 @@ export const PUT = withAuth(async (req, session, ctx) => {
   return jsonResponse(updated);
 });
 
-/** DELETE /api/notes/[id] — delete a note */
+/** DELETE /api/notes/[id] — soft-delete a note (moves to recycle bin) */
 export const DELETE = withAuth(async (req, session, ctx) => {
   const { id } = await (ctx as RouteContext).params;
 
   const [existing] = await db
-    .select({ id: notes.id })
+    .select({ id: notes.id, deletedAt: notes.deletedAt })
     .from(notes)
     .where(and(eq(notes.id, id), eq(notes.userId, session.user!.id!)));
 
-  if (!existing) {
+  if (!existing || existing.deletedAt) {
     return errorResponse("Note not found", 404);
   }
 
-  await db.delete(notes).where(eq(notes.id, id));
+  await db
+    .update(notes)
+    .set({ deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    .where(eq(notes.id, id));
 
   return jsonResponse({ deleted: true });
 });

@@ -1,7 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { tasks, notes, dispatches, projects } from "@/db/schema";
-import { eq, and, or, like, sql } from "drizzle-orm";
+import { eq, and, or, like, sql, isNull } from "drizzle-orm";
 
 const MAX_PER_CATEGORY = 10;
 
@@ -32,6 +32,7 @@ export const GET = withAuth(async (req, session) => {
       .where(
         and(
           eq(tasks.userId, userId),
+          isNull(tasks.deletedAt),
           or(
             like(sql`LOWER(${tasks.title})`, pattern),
             like(sql`LOWER(${tasks.description})`, pattern),
@@ -46,6 +47,7 @@ export const GET = withAuth(async (req, session) => {
       .where(
         and(
           eq(notes.userId, userId),
+          isNull(notes.deletedAt),
           or(
             like(sql`LOWER(${notes.title})`, pattern),
             like(sql`LOWER(${notes.content})`, pattern),
@@ -71,6 +73,7 @@ export const GET = withAuth(async (req, session) => {
       .where(
         and(
           eq(projects.userId, userId),
+          isNull(projects.deletedAt),
           or(
             like(sql`LOWER(${projects.name})`, pattern),
             like(sql`LOWER(${projects.description})`, pattern),

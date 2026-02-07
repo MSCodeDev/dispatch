@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Sidebar } from "@/components/Sidebar";
@@ -37,10 +37,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onSearchOpen={() => setSearchOpen(true)}
         onShortcutHelp={() => setShortcutHelpOpen(true)}
       />
-      <Sidebar
-        onSearchOpen={() => setSearchOpen(true)}
-        onShortcutHelp={() => setShortcutHelpOpen(true)}
-      />
+      <Suspense>
+        <Sidebar
+          onSearchOpen={() => setSearchOpen(true)}
+          onShortcutHelp={() => setShortcutHelpOpen(true)}
+        />
+      </Suspense>
       <main className="flex-1 overflow-y-auto bg-neutral-50 dark:bg-neutral-950">
         {children}
       </main>

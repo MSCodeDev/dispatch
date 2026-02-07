@@ -46,7 +46,7 @@ export function DispatchPage() {
   const fetchDispatch = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await api.dispatches.list(date);
+      const list = await api.dispatches.list(date) as Dispatch[];
       let d = list[0] ?? null;
 
       if (!d) {
@@ -59,7 +59,7 @@ export function DispatchPage() {
       const tasks = await api.dispatches.getTasks(d.id);
       setLinkedTasks(tasks);
 
-      const all = await api.tasks.list();
+      const all = await api.tasks.list() as Task[];
       setAllTasks(all);
     } finally {
       setLoading(false);

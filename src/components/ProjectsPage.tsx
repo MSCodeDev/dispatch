@@ -30,7 +30,7 @@ const PROJECT_STATUS_LABELS: Record<string, string> = {
 
 const PROJECT_STATUS_ICONS: Record<
   string,
-  (props: { className?: string }) => JSX.Element
+  (props: { className?: string }) => React.ReactElement
 > = {
   active: IconBolt,
   paused: IconClock,

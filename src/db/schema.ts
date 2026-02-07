@@ -58,6 +58,7 @@ export const projects = sqliteTable(
       .notNull()
       .default("active"),
     color: text("color").notNull().default("blue"),
+    deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()
       .default(sql`(current_timestamp)`),
@@ -90,6 +91,7 @@ export const tasks = sqliteTable(
       .notNull()
       .default("medium"),
     dueDate: text("dueDate"),
+    deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()
       .default(sql`(current_timestamp)`),
@@ -156,6 +158,7 @@ export const notes = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     content: text("content"),
+    deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()
       .default(sql`(current_timestamp)`),

@@ -173,3 +173,18 @@ Introduce Projects as first-class groupings of tasks, tighten task/project syner
 - [x] **10.7** Add project signals to the dashboard (active project progress, recent project activity) without overpowering tasks/notes.
 - [x] **10.8** Expand the Profile page content (account details, usage stats for tasks/notes/projects, preferences, and shortcuts).
 - [x] **10.9** Add tests for projects API routes and tasks/projects integration (filters, assignment, ownership).
+
+## Phase 11: Recycle Bin (Soft-Delete)
+
+Add a recycle bin that holds deleted tasks, notes, and projects for 30 days before permanently purging them.
+
+- [x] **11.1** Add `deletedAt` (nullable text) column to `tasks`, `notes`, and `projects` tables. Generate and apply migration.
+- [x] **11.2** Convert all DELETE handlers for tasks, notes, and projects to soft-delete (set `deletedAt` timestamp instead of hard-deleting the row).
+- [x] **11.3** Add `isNull(deletedAt)` filters to all list, get-by-id, update, and search queries so soft-deleted items are invisible to normal views.
+- [x] **11.4** Create `/api/recycle-bin` — GET lists all soft-deleted items across entity types; POST accepts `{id, type, action}` to restore or permanently delete.
+- [x] **11.5** Auto-purge: on each recycle bin list request, permanently delete items whose `deletedAt` is older than 30 days.
+- [x] **11.6** Add `recycleBin` methods to the client API (`src/lib/client.ts`).
+- [x] **11.7** Build the Recycle Bin UI page (`/recycle-bin`) with type filter tabs, restore/delete-forever actions, and days-remaining indicator.
+- [x] **11.8** Add a Recycle Bin link (with trash icon) to the sidebar Workspace section below Notes.
+- [x] **11.9** Update `spec.md` to reflect the full current feature set including soft-delete, recycle bin, and all pages/endpoints.
+/usa

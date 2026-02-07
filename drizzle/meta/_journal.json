@@ -29,6 +29,13 @@
       "when": 1770530400000,
       "tag": "0003_proud_projects",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1770447728609,
+      "tag": "0004_cold_expediter",
+      "breakpoints": true
     }
   ]
 }

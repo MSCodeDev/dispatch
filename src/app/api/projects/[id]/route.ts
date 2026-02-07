@@ -1,7 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { projects, tasks } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 const VALID_STATUSES = ["active", "paused", "completed"] as const;
 const VALID_COLORS = ["blue", "emerald", "amber", "rose", "violet", "slate"] as const;
@@ -15,7 +15,7 @@ export const GET = withAuth(async (req, session, ctx) => {
   const [project] = await db
     .select()
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.userId, session.user!.id!)));
+    .where(and(eq(projects.id, id), eq(projects.userId, session.user!.id!), isNull(projects.deletedAt)));
 
   if (!project) {
     return errorResponse("Project not found", 404);
@@ -68,7 +68,7 @@ export const PUT = withAuth(async (req, session, ctx) => {
   const [existing] = await db
     .select({ id: projects.id })
     .from(projects)
-    .where(and(eq(projects.id, id), eq(projects.userId, session.user!.id!)));
+    .where(and(eq(projects.id, id), eq(projects.userId, session.user!.id!), isNull(projects.deletedAt)));
 
   if (!existing) {
     return errorResponse("Project not found", 404);
@@ -89,26 +89,31 @@ export const PUT = withAuth(async (req, session, ctx) => {
   return jsonResponse(updated);
 });
 
-/** DELETE /api/projects/[id] — delete a project */
+/** DELETE /api/projects/[id] — soft-delete a project (moves to recycle bin) */
 export const DELETE = withAuth(async (req, session, ctx) => {
   const { id } = await (ctx as RouteContext).params;
 
   const [existing] = await db
-    .select({ id: projects.id })
+    .select({ id: projects.id, deletedAt: projects.deletedAt })
     .from(projects)
     .where(and(eq(projects.id, id), eq(projects.userId, session.user!.id!)));
 
-  if (!existing) {
+  if (!existing || existing.deletedAt) {
     return errorResponse("Project not found", 404);
   }
 
   const now = new Date().toISOString();
+
+  // Detach tasks from this project (only non-deleted tasks)
   await db
     .update(tasks)
     .set({ projectId: null, updatedAt: now })
-    .where(and(eq(tasks.userId, session.user!.id!), eq(tasks.projectId, id)));
+    .where(and(eq(tasks.userId, session.user!.id!), eq(tasks.projectId, id), isNull(tasks.deletedAt)));
 
-  await db.delete(projects).where(eq(projects.id, id));
+  await db
+    .update(projects)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(eq(projects.id, id));
 
   return jsonResponse({ deleted: true });
 });

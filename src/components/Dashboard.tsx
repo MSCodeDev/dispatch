@@ -103,14 +103,14 @@ export function Dashboard({ userName }: { userName: string }) {
   const recentActivity: ActivityItem[] = [
     ...tasks.map((t) => ({
       id: `task-${t.id}`,
-      type: "task",
+      type: "task" as const,
       title: t.title,
       date: t.updatedAt,
       status: t.status,
     })),
     ...notes.map((n) => ({
       id: `note-${n.id}`,
-      type: "note",
+      type: "note" as const,
       title: n.title,
       date: n.updatedAt,
     })),
