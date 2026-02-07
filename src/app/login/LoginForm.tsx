@@ -123,6 +123,7 @@ export function LoginForm() {
           <input
             name="name"
             type="text"
+            autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 py-2.5 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
@@ -132,6 +133,7 @@ export function LoginForm() {
         <input
           name="email"
           type="email"
+          autoComplete={mode === "login" ? "username" : "email"}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -141,6 +143,7 @@ export function LoginForm() {
         <input
           name="password"
           type="password"
+          autoComplete={mode === "login" ? "current-password" : "new-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
