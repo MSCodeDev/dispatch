@@ -1,6 +1,7 @@
 import { signIn } from "@/auth";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { LoginForm } from "./LoginForm";
 
 export default async function LoginPage({
   searchParams,
@@ -14,7 +15,6 @@ export default async function LoginPage({
 
   const { error } = await searchParams;
   const hasGitHub = !!(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET);
-  const isDev = process.env.NODE_ENV === "development";
 
   const errorMessages: Record<string, string> = {
     OAuthAccountNotLinked: "This GitHub account is already linked to a different user.",
@@ -70,39 +70,14 @@ export default async function LoginPage({
                 </button>
               </form>
             )}
-            {isDev && (
-              <form
-                action={async (formData: FormData) => {
-                  "use server";
-                  await signIn("credentials", {
-                    email: formData.get("email") as string,
-                    redirectTo: "/",
-                  });
-                }}
-                className="space-y-3"
-              >
-                {hasGitHub && (
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 border-t border-neutral-200 dark:border-neutral-700" />
-                    <span className="text-xs text-neutral-400 dark:text-neutral-500">or</span>
-                    <div className="flex-1 border-t border-neutral-200 dark:border-neutral-700" />
-                  </div>
-                )}
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue="test@dispatch.local"
-                  className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-4 py-2.5 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
-                  placeholder="Email"
-                />
-                <button
-                  type="submit"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-medium text-white hover:bg-blue-500 active:scale-[0.98] transition-all shadow-sm"
-                >
-                  Dev Login
-                </button>
-              </form>
+            {hasGitHub && (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 border-t border-neutral-200 dark:border-neutral-700" />
+                <span className="text-xs text-neutral-400 dark:text-neutral-500">or</span>
+                <div className="flex-1 border-t border-neutral-200 dark:border-neutral-700" />
+              </div>
             )}
+            <LoginForm />
           </div>
         </div>
 

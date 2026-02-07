@@ -24,6 +24,7 @@ import {
   IconInbox,
   IconTrash,
   IconList,
+  IconPuzzle,
 } from "@/components/icons";
 
 interface SidebarProps {
@@ -109,6 +110,7 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   }
 
   const profileActive = isActive("/profile");
+  const integrationsActive = isActive("/integrations");
 
   const currentProjectId = useMemo(() => {
     if (pathname.startsWith("/projects") || pathname.startsWith("/tasks")) {
@@ -455,6 +457,28 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                     {theme === "dark" ? "Light Mode" : "Dark Mode"}
                   </span>
                 </button>
+              </li>
+
+              {/* Integrations */}
+              <li>
+                <Link
+                  href="/integrations"
+                  title={collapsed ? "Integrations" : undefined}
+                  className={`flex items-center rounded-lg py-2 text-sm transition-all ${
+                    integrationsActive
+                      ? "bg-neutral-800/60 text-white"
+                      : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
+                  } ${collapsed ? "justify-center" : "gap-3 px-3"}`}
+                >
+                  <IconPuzzle className="w-5 h-5 flex-shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-300 ${
+                      collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    }`}
+                  >
+                    Integrations
+                  </span>
+                </Link>
               </li>
 
               {/* Shortcuts */}

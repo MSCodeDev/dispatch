@@ -11,6 +11,7 @@ export const users = sqliteTable("user", {
   email: text("email").unique(),
   emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
   image: text("image"),
+  password: text("password"), // hashed password for local accounts
 });
 
 export const accounts = sqliteTable(
@@ -167,4 +168,26 @@ export const notes = sqliteTable(
       .default(sql`(current_timestamp)`),
   },
   (table) => [index("note_userId_idx").on(table.userId)]
+);
+
+export const apiKeys = sqliteTable(
+  "api_key",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    key: text("key").notNull().unique(),
+    lastUsedAt: text("lastUsedAt"),
+    createdAt: text("createdAt")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("api_key_userId_idx").on(table.userId),
+    index("api_key_key_idx").on(table.key),
+  ]
 );
