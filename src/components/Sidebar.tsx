@@ -23,6 +23,7 @@ import {
   IconPlus,
   IconHelp,
   IconInbox,
+  IconTrash,
 } from "@/components/icons";
 
 interface SidebarProps {
@@ -45,6 +46,7 @@ const WORKSPACE_NAV: NavItem[] = [
   { href: "/inbox", label: "Priority Inbox", icon: IconInbox },
   { href: "/tasks", label: "Tasks", icon: IconCheckCircle },
   { href: "/notes", label: "Notes", icon: IconDocument },
+  { href: "/recycle-bin", label: "Recycle Bin", icon: IconTrash },
 ];
 
 export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {

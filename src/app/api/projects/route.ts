@@ -2,7 +2,7 @@ import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
 import { projects, tasks } from "@/db/schema";
-import { eq, and, sql, inArray, isNotNull } from "drizzle-orm";
+import { eq, and, sql, inArray, isNotNull, isNull } from "drizzle-orm";
 
 const VALID_STATUSES = ["active", "paused", "completed"] as const;
 const VALID_COLORS = ["blue", "emerald", "amber", "rose", "violet", "slate"] as const;
@@ -29,7 +29,7 @@ async function attachStats(userId: string, rows: ProjectRow[]) {
       done: sql<number>`sum(case when ${tasks.status} = 'done' then 1 else 0 end)`,
     })
     .from(tasks)
-    .where(and(eq(tasks.userId, userId), isNotNull(tasks.projectId), inArray(tasks.projectId, ids)))
+    .where(and(eq(tasks.userId, userId), isNotNull(tasks.projectId), inArray(tasks.projectId, ids), isNull(tasks.deletedAt)))
     .groupBy(tasks.projectId);
 
   const statsById = new Map<string, ProjectStats>();
@@ -55,7 +55,7 @@ export const GET = withAuth(async (req, session) => {
   const status = url.searchParams.get("status");
   const include = url.searchParams.get("include");
 
-  const conditions = [eq(projects.userId, session.user!.id!)];
+  const conditions = [eq(projects.userId, session.user!.id!), isNull(projects.deletedAt)];
 
   if (status) {
     if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {

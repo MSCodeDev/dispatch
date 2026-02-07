@@ -2,14 +2,14 @@ import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
 import { notes } from "@/db/schema";
-import { eq, and, like, sql } from "drizzle-orm";
+import { eq, and, like, sql, isNull } from "drizzle-orm";
 
 /** GET /api/notes — list notes for the current user */
 export const GET = withAuth(async (req, session) => {
   const url = new URL(req.url);
   const search = url.searchParams.get("search");
 
-  const conditions = [eq(notes.userId, session.user!.id!)];
+  const conditions = [eq(notes.userId, session.user!.id!), isNull(notes.deletedAt)];
 
   if (search) {
     const escaped = search.replace(/%/g, "\\%").replace(/_/g, "\\_");

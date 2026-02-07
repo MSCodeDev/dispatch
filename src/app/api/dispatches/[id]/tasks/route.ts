@@ -1,7 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { dispatches, dispatchTasks, tasks } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,7 +34,7 @@ export const GET = withAuth(async (req, session, ctx) => {
     })
     .from(dispatchTasks)
     .innerJoin(tasks, eq(dispatchTasks.taskId, tasks.id))
-    .where(eq(dispatchTasks.dispatchId, id));
+    .where(and(eq(dispatchTasks.dispatchId, id), isNull(tasks.deletedAt)));
 
   return jsonResponse(linked);
 });

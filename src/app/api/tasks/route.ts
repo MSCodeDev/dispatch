@@ -14,7 +14,7 @@ export const GET = withAuth(async (req, session) => {
   const priority = url.searchParams.get("priority");
   const projectId = url.searchParams.get("projectId");
 
-  const conditions = [eq(tasks.userId, session.user!.id!)];
+  const conditions = [eq(tasks.userId, session.user!.id!), isNull(tasks.deletedAt)];
 
   if (status) {
     if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {

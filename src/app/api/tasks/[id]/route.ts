@@ -1,7 +1,7 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
 import { tasks, projects } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 
 const VALID_STATUSES = ["open", "in_progress", "done"] as const;
 const VALID_PRIORITIES = ["low", "medium", "high"] as const;
@@ -15,7 +15,7 @@ export const GET = withAuth(async (req, session, ctx) => {
   const [task] = await db
     .select()
     .from(tasks)
-    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user!.id!)));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user!.id!), isNull(tasks.deletedAt)));
 
   if (!task) {
     return errorResponse("Task not found", 404);
@@ -87,11 +87,11 @@ export const PUT = withAuth(async (req, session, ctx) => {
     resolvedProjectId = projectId as string;
   }
 
-  // Check task exists and belongs to user
+  // Check task exists, belongs to user, and is not soft-deleted
   const [existing] = await db
     .select({ id: tasks.id })
     .from(tasks)
-    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user!.id!)));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user!.id!), isNull(tasks.deletedAt)));
 
   if (!existing) {
     return errorResponse("Task not found", 404);
@@ -114,20 +114,23 @@ export const PUT = withAuth(async (req, session, ctx) => {
   return jsonResponse(updated);
 });
 
-/** DELETE /api/tasks/[id] — delete a task */
+/** DELETE /api/tasks/[id] — soft-delete a task (moves to recycle bin) */
 export const DELETE = withAuth(async (req, session, ctx) => {
   const { id } = await (ctx as RouteContext).params;
 
   const [existing] = await db
-    .select({ id: tasks.id })
+    .select({ id: tasks.id, deletedAt: tasks.deletedAt })
     .from(tasks)
     .where(and(eq(tasks.id, id), eq(tasks.userId, session.user!.id!)));
 
-  if (!existing) {
+  if (!existing || existing.deletedAt) {
     return errorResponse("Task not found", 404);
   }
 
-  await db.delete(tasks).where(eq(tasks.id, id));
+  await db
+    .update(tasks)
+    .set({ deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    .where(eq(tasks.id, id));
 
   return jsonResponse({ deleted: true });
 });

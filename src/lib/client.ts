@@ -71,6 +71,19 @@ export interface SearchResults {
   projects: Project[];
 }
 
+export interface RecycleBinItem {
+  id: string;
+  type: "task" | "note" | "project";
+  title: string;
+  deletedAt: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface RecycleBinResponse {
+  items: RecycleBinItem[];
+  retentionDays: number;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -97,13 +110,33 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`/api${path}`, {
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
   });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new ApiError(data.error || "Request failed", res.status);
+
+  if (res.status === 204 || res.status === 205) {
+    return undefined as T;
   }
+
+  const text = await res.text();
+  let data: any = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiError("Invalid JSON response", res.status);
+    }
+  }
+
+  if (!res.ok) {
+    throw new ApiError(data?.error || res.statusText || "Request failed", res.status);
+  }
+
+  if (data === null) {
+    throw new ApiError("Empty response", res.status);
+  }
+
   return data as T;
 }
 
@@ -253,4 +286,20 @@ export const api = {
 
   search: (q: string) =>
     request<SearchResults>(`/search${qs({ q })}`),
+
+  recycleBin: {
+    list: () => request<RecycleBinResponse>("/recycle-bin"),
+
+    restore: (id: string, type: "task" | "note" | "project") =>
+      request<{ restored: true }>("/recycle-bin", {
+        method: "POST",
+        body: JSON.stringify({ id, type, action: "restore" }),
+      }),
+
+    permanentDelete: (id: string, type: "task" | "note" | "project") =>
+      request<{ permanentlyDeleted: true }>("/recycle-bin", {
+        method: "POST",
+        body: JSON.stringify({ id, type, action: "delete" }),
+      }),
+  },
 };
