@@ -10,7 +10,6 @@ import {
   type Project,
 } from "@/lib/client";
 import { TaskModal } from "@/components/TaskModal";
-import { Pagination } from "@/components/Pagination";
 import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
 import { IconPlus, IconPencil, IconTrash } from "@/components/icons";
@@ -45,8 +44,6 @@ export function TasksPage() {
   );
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [showCompleted, setShowCompleted] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -82,20 +79,16 @@ export function TasksPage() {
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         projectId: projectFilter || undefined,
-        page,
-        limit: 20,
       });
       if (Array.isArray(data)) {
         setTasks(data);
-        setTotalPages(1);
       } else {
         setTasks(data.data);
-        setTotalPages(data.pagination.totalPages);
       }
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter, projectFilter, page]);
+  }, [statusFilter, priorityFilter, projectFilter]);
 
   useEffect(() => {
     fetchTasks();
@@ -128,11 +121,6 @@ export function TasksPage() {
     window.addEventListener("shortcut:new-task", handleNewTask);
     return () => window.removeEventListener("shortcut:new-task", handleNewTask);
   }, []);
-
-  // Reset page on filter change
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter, priorityFilter, projectFilter]);
 
   // Cancel delete confirmation when clicking outside
   useEffect(() => {
@@ -544,8 +532,6 @@ export function TasksPage() {
           ))}
         </ul>
       )}
-
-      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       {modalOpen && (
         <TaskModal
