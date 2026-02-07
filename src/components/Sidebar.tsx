@@ -22,6 +22,7 @@ import {
   IconBolt,
   IconPlus,
   IconHelp,
+  IconInbox,
 } from "@/components/icons";
 
 interface SidebarProps {
@@ -41,6 +42,7 @@ const OVERVIEW_NAV: NavItem[] = [
 
 const WORKSPACE_NAV: NavItem[] = [
   { href: "/dispatch", label: "Dispatch", icon: IconCalendar },
+  { href: "/inbox", label: "Priority Inbox", icon: IconInbox },
   { href: "/tasks", label: "Tasks", icon: IconCheckCircle },
   { href: "/notes", label: "Notes", icon: IconDocument },
 ];
