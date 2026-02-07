@@ -2,6 +2,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* === Toast === */
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -11,4 +12,205 @@
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* === 8A.1 Modal enter: fade + scale === */
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* === 8A.1 Search overlay: slide-down + fade === */
+@keyframes slide-down-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === 8A.2 Staggered list item fade-in-up === */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === 8A.3 Status dot pulse ring === */
+@keyframes status-ring {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 0.6;
+  }
+  100% {
+    box-shadow: 0 0 0 6px currentColor;
+    opacity: 0;
+  }
+}
+
+@keyframes row-flash {
+  0% { background-color: transparent; }
+  30% { background-color: var(--flash-color, rgba(59, 130, 246, 0.1)); }
+  100% { background-color: transparent; }
+}
+
+/* === 8A.6 Delete slide-out === */
+@keyframes slide-out-right {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 80px;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(40px);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* === 8E.23 Shimmer skeleton === */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* === 8A.5 Theme toggle icon spin === */
+@keyframes icon-spin-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* === 8C.16 Save checkmark === */
+@keyframes check-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* === Utility classes === */
+
+.animate-modal-enter {
+  animation: modal-enter 0.2s ease-out both;
+}
+
+.animate-backdrop-enter {
+  animation: backdrop-enter 0.15s ease-out both;
+}
+
+.animate-slide-down-fade {
+  animation: slide-down-fade 0.2s ease-out both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out both;
+}
+
+.animate-status-ring {
+  animation: status-ring 0.4s ease-out both;
+}
+
+.animate-row-flash {
+  animation: row-flash 0.6s ease-out both;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-out forwards;
+}
+
+.animate-icon-spin-in {
+  animation: icon-spin-in 0.3s ease-out both;
+}
+
+.animate-check-appear {
+  animation: check-appear 0.2s ease-out both;
+}
+
+.animate-spinner {
+  animation: spinner 0.6s linear infinite;
+}
+
+/* Shimmer skeleton gradient */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme(--color-neutral-200) 25%,
+    theme(--color-neutral-100) 50%,
+    theme(--color-neutral-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+:is(.dark) .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    theme(--color-neutral-800) 25%,
+    theme(--color-neutral-700) 50%,
+    theme(--color-neutral-800) 75%
+  );
+  background-size: 200% 100%;
+}
+
+/* Focus-visible ring utility (8B.12) */
+:focus-visible {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  border-radius: inherit;
+}
+
+/* Smooth page-level theme transition (8A.5) */
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition: background-color 0.3s ease, color 0.15s ease, border-color 0.3s ease !important;
 }

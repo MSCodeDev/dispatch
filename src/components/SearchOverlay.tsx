@@ -125,8 +125,8 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-neutral-900 shadow-2xl mx-4 overflow-hidden">
+      <div className="absolute inset-0 bg-black/60 animate-backdrop-enter" onClick={onClose} />
+      <div className="relative w-full max-w-2xl rounded-xl bg-white dark:bg-neutral-900 shadow-2xl mx-4 overflow-hidden animate-slide-down-fade">
         {/* Search input */}
         <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 px-4 py-3">
           <IconSearch className="w-5 h-5 text-neutral-400 flex-shrink-0" />
@@ -148,6 +148,7 @@ export function SearchOverlay({ onClose }: SearchOverlayProps) {
         <div className="max-h-[50vh] overflow-y-auto">
           {loading && (
             <div className="px-4 py-6 text-center text-sm text-neutral-400 dark:text-neutral-500">
+              <span className="inline-block w-4 h-4 border-2 border-neutral-300 dark:border-neutral-600 border-t-transparent rounded-full animate-spinner mr-2 align-middle" />
               Searching...
             </div>
           )}
@@ -219,7 +220,7 @@ function ResultSection({
       <p className="px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
         {label}
       </p>
-      {items.map((item) => {
+      {items.map((item, i) => {
         const globalIndex = allItems.indexOf(item);
         const isSelected = globalIndex === selectedIndex;
         return (
@@ -231,6 +232,7 @@ function ResultSection({
                 ? "bg-neutral-100 dark:bg-neutral-800"
                 : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
             }`}
+            style={{ animationDelay: `${i * 30}ms` }}
           >
             <TypeBadge type={item.type} />
             <div className="flex-1 min-w-0">

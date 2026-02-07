@@ -35,9 +35,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   function setTheme(t: Theme) {
+    // Add transitioning class for smooth theme change
+    document.documentElement.classList.add("theme-transitioning");
     setThemeState(t);
     localStorage.setItem("theme", t);
     applyTheme(t);
+    // Remove transitioning class after animation completes
+    setTimeout(() => {
+      document.documentElement.classList.remove("theme-transitioning");
+    }, 300);
   }
 
   function toggleTheme() {
