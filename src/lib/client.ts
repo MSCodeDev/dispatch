@@ -2,10 +2,34 @@
 
 export type TaskStatus = "open" | "in_progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
+export type ProjectStatus = "active" | "paused" | "completed";
+
+export interface Project {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectStats {
+  total: number;
+  open: number;
+  inProgress: number;
+  done: number;
+}
+
+export interface ProjectWithStats extends Project {
+  stats: ProjectStats;
+}
 
 export interface Task {
   id: string;
   userId: string;
+  projectId: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
@@ -94,10 +118,11 @@ function qs(params: Record<string, string | undefined>): string {
 
 export const api = {
   tasks: {
-    list: (filters?: { status?: TaskStatus; priority?: TaskPriority; page?: number; limit?: number }) =>
+    list: (filters?: { status?: TaskStatus; priority?: TaskPriority; projectId?: string; page?: number; limit?: number }) =>
       request<Task[] | PaginatedResponse<Task>>(`/tasks${qs({
         status: filters?.status,
         priority: filters?.priority,
+        projectId: filters?.projectId,
         page: filters?.page?.toString(),
         limit: filters?.limit?.toString(),
       })}`),
@@ -110,6 +135,7 @@ export const api = {
       status?: TaskStatus;
       priority?: TaskPriority;
       dueDate?: string;
+      projectId?: string | null;
     }) => request<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }),
 
     update: (
@@ -120,11 +146,46 @@ export const api = {
         status?: TaskStatus;
         priority?: TaskPriority;
         dueDate?: string | null;
+        projectId?: string | null;
       },
     ) => request<Task>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
     delete: (id: string) =>
       request<{ deleted: true }>(`/tasks/${id}`, { method: "DELETE" }),
+  },
+
+  projects: {
+    list: (filters?: { status?: ProjectStatus; page?: number; limit?: number }) =>
+      request<Project[] | PaginatedResponse<Project>>(`/projects${qs({
+        status: filters?.status,
+        page: filters?.page?.toString(),
+        limit: filters?.limit?.toString(),
+      })}`),
+
+    listWithStats: (filters?: { status?: ProjectStatus; page?: number; limit?: number }) =>
+      request<ProjectWithStats[] | PaginatedResponse<ProjectWithStats>>(`/projects${qs({
+        status: filters?.status,
+        page: filters?.page?.toString(),
+        limit: filters?.limit?.toString(),
+        include: "stats",
+      })}`),
+
+    get: (id: string) => request<Project>(`/projects/${id}`),
+
+    create: (data: { name: string; description?: string; status?: ProjectStatus; color?: string }) =>
+      request<Project>("/projects", { method: "POST", body: JSON.stringify(data) }),
+
+    update: (id: string, data: { name?: string; description?: string; status?: ProjectStatus; color?: string }) =>
+      request<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+    delete: (id: string) =>
+      request<{ deleted: true }>(`/projects/${id}`, { method: "DELETE" }),
+
+    getTasks: (id: string, params?: { page?: number; limit?: number }) =>
+      request<Task[] | PaginatedResponse<Task>>(`/projects/${id}/tasks${qs({
+        page: params?.page?.toString(),
+        limit: params?.limit?.toString(),
+      })}`),
   },
 
   notes: {

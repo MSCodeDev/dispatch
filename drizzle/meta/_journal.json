@@ -22,6 +22,13 @@
       "when": 1770427057231,
       "tag": "0002_cold_korath",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1770530400000,
+      "tag": "0003_proud_projects",
+      "breakpoints": true
     }
   ]
 }

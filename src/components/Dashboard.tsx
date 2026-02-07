@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, type Task, type Note, type TaskStatus } from "@/lib/client";
+import { api, type Task, type Note, type TaskStatus, type ProjectWithStats } from "@/lib/client";
+import { PROJECT_COLORS } from "@/lib/projects";
 import {
   IconPlus,
   IconDocument,
@@ -11,10 +12,17 @@ import {
   IconSearch,
 } from "@/components/icons";
 
+const STATUS_BADGES: Record<TaskStatus, string> = {
+  open: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  in_progress: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  done: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+};
+
 export function Dashboard({ userName }: { userName: string }) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [projects, setProjects] = useState<ProjectWithStats[]>([]);
   const [dispatchCount, setDispatchCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -34,8 +42,9 @@ export function Dashboard({ userName }: { userName: string }) {
       api.tasks.list(),
       api.notes.list(),
       api.dispatches.list({ page: 1, limit: 1 }),
+      api.projects.listWithStats({ status: "active" }),
     ])
-      .then(([t, n, d]) => {
+      .then(([t, n, d, p]) => {
         if (!active) return;
         setTasks(Array.isArray(t) ? t : t.data);
         setNotes(Array.isArray(n) ? n : n.data);
@@ -44,6 +53,7 @@ export function Dashboard({ userName }: { userName: string }) {
         } else {
           setDispatchCount(d.pagination.total);
         }
+        setProjects(Array.isArray(p) ? p : p.data);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -98,6 +108,25 @@ export function Dashboard({ userName }: { userName: string }) {
   ]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 6);
+
+  const projectMap = new Map(projects.map((project) => [project.id, project]));
+
+  const topProjects = [...projects]
+    .filter((project) => project.stats.total > 0)
+    .sort((a, b) => b.stats.total - a.stats.total)
+    .slice(0, 3);
+
+  const recentProjectActivity = [...tasks]
+    .filter((task) => Boolean(task.projectId))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 4)
+    .map((task) => ({
+      id: task.id,
+      title: task.title,
+      status: task.status,
+      projectName: projectMap.get(task.projectId || "")?.name ?? "Project",
+      updatedAt: task.updatedAt,
+    }));
 
   // Progress calculation
   const totalTasks = tasks.length;
@@ -197,6 +226,79 @@ export function Dashboard({ userName }: { userName: string }) {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Project signals */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in-up" style={{ animationDelay: "130ms" }}>
+        <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Active Projects</h2>
+            <Link href="/projects" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+              View all
+            </Link>
+          </div>
+          {topProjects.length === 0 ? (
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">No active projects yet</p>
+          ) : (
+            <div className="space-y-3">
+              {topProjects.map((project) => {
+                const color = PROJECT_COLORS[project.color]?.dot ?? "bg-blue-500";
+                const percent = project.stats.total > 0
+                  ? Math.round((project.stats.done / project.stats.total) * 100)
+                  : 0;
+                return (
+                  <div key={project.id} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-2 w-2 rounded-full ${color}`} />
+                        <span className="font-medium text-neutral-700 dark:text-neutral-300 truncate">
+                          {project.name}
+                        </span>
+                      </div>
+                      <span className="text-neutral-400 dark:text-neutral-500">
+                        {project.stats.done}/{project.stats.total}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-green-500 transition-all duration-500"
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Recent Project Activity</h2>
+            <Link href="/projects" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+              Projects
+            </Link>
+          </div>
+          {recentProjectActivity.length === 0 ? (
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">No project activity yet</p>
+          ) : (
+            <div className="space-y-2">
+              {recentProjectActivity.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
+                  <div className="min-w-0">
+                    <p className="text-neutral-500 dark:text-neutral-400">{item.projectName}</p>
+                    <p className="font-medium text-neutral-700 dark:text-neutral-300 truncate">
+                      {item.title}
+                    </p>
+                  </div>
+                  <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${STATUS_BADGES[item.status]}`}>
+                    {item.status.replace("_", " ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

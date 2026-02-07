@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
+import { api, type ProjectWithStats } from "@/lib/client";
+import { PROJECT_COLORS } from "@/lib/projects";
 import {
   IconGrid,
   IconCalendar,
   IconCheckCircle,
   IconDocument,
+  IconFolder,
   IconSearch,
   IconChevronLeft,
   IconChevronDown,
@@ -45,6 +48,7 @@ const WORKSPACE_NAV: NavItem[] = [
 export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
 
@@ -52,8 +56,31 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   const [sectionsOpen, setSectionsOpen] = useState<Record<string, boolean>>({
     main: true,
     workspace: true,
+    projects: true,
     account: true,
   });
+  const [projects, setProjects] = useState<ProjectWithStats[]>([]);
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      const data = await api.projects.listWithStats({ status: "active" });
+      setProjects(Array.isArray(data) ? data : data.data);
+    } catch {
+      setProjects([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    function handleRefresh() {
+      fetchProjects();
+    }
+    window.addEventListener("projects:refresh", handleRefresh);
+    return () => window.removeEventListener("projects:refresh", handleRefresh);
+  }, [fetchProjects]);
 
   // Read collapsed state from localStorage on mount
   useEffect(() => {
@@ -78,6 +105,15 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
   }
 
   const profileActive = isActive("/profile");
+
+  const currentProjectId = useMemo(() => {
+    if (pathname.startsWith("/projects") || pathname.startsWith("/tasks")) {
+      return searchParams.get("projectId") || "";
+    }
+    return "";
+  }, [pathname, searchParams]);
+
+  const projectsRootActive = pathname.startsWith("/projects") && !currentProjectId;
 
   const quickActions = [
     {
@@ -290,6 +326,93 @@ export function Sidebar({ onSearchOpen, onShortcutHelp }: SidebarProps) {
                   </li>
                 );
               })}
+            </ul>
+          )}
+        </div>
+
+        {/* Projects section */}
+        <div className="pt-3 border-t border-neutral-800/50">
+          <button
+            onClick={() => toggleSection("projects")}
+            className={`flex items-center w-full mb-1 ${
+              collapsed ? "justify-center px-2" : "justify-between px-2"
+            }`}
+          >
+            <span
+              className={`text-xs font-semibold uppercase tracking-wider text-neutral-600 whitespace-nowrap transition-all duration-300 ${
+                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+              }`}
+            >
+              Projects
+            </span>
+            {!collapsed && (
+              <IconChevronDown
+                className={`w-3.5 h-3.5 text-neutral-600 transition-transform duration-200 ${
+                  sectionsOpen.projects ? "" : "-rotate-90"
+                }`}
+              />
+            )}
+          </button>
+
+          {(sectionsOpen.projects || collapsed) && (
+            <ul className="space-y-0.5">
+              <li>
+                <Link
+                  href="/projects"
+                  title={collapsed ? "All Projects" : undefined}
+                  className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                    projectsRootActive
+                      ? "bg-neutral-800/60 text-white"
+                      : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
+                  } ${collapsed ? "justify-center px-2" : ""}`}
+                >
+                  <IconFolder className="w-5 h-5 flex-shrink-0" />
+                  <span
+                    className={`whitespace-nowrap transition-all duration-300 flex-1 ${
+                      collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    }`}
+                  >
+                    All Projects
+                  </span>
+                </Link>
+              </li>
+              {projects.length === 0 ? (
+                <li className={`px-3 py-2 text-xs text-neutral-600 ${collapsed ? "hidden" : ""}`}>
+                  No active projects
+                </li>
+              ) : (
+                projects.map((project) => {
+                  const active = project.id === currentProjectId;
+                  const color = PROJECT_COLORS[project.color]?.dot ?? "bg-blue-500";
+                  return (
+                    <li key={project.id}>
+                      <Link
+                        href={`/projects?projectId=${project.id}`}
+                        title={collapsed ? project.name : undefined}
+                        className={`group/nav flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all active:scale-[0.97] ${
+                          active
+                            ? "bg-neutral-800/60 text-white"
+                            : "text-neutral-400 hover:bg-neutral-800/40 hover:text-neutral-200"
+                        } ${collapsed ? "justify-center px-2" : ""}`}
+                      >
+                        <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+                        <span
+                          className={`whitespace-nowrap transition-all duration-300 flex-1 ${
+                            collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                          }`}
+                        >
+                          {project.name}
+                        </span>
+                        {!collapsed && (
+                          <span className="text-xs text-neutral-500 group-hover/nav:text-neutral-300">
+                            {project.stats.total}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })
+              )}
             </ul>
           )}
         </div>

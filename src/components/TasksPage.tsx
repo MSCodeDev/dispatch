@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   api,
   type Task,
   type TaskStatus,
   type TaskPriority,
+  type Project,
 } from "@/lib/client";
 import { TaskModal } from "@/components/TaskModal";
 import { Pagination } from "@/components/Pagination";
 import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
 import { IconPlus, IconPencil, IconTrash } from "@/components/icons";
+import { PROJECT_COLORS } from "@/lib/projects";
 
 type SortField = "createdAt" | "dueDate" | "priority";
 
@@ -28,12 +30,16 @@ export function TasksPage() {
   const { toast } = useToast();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "">(
     (searchParams.get("status") as TaskStatus) || "",
   );
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | "">(
     (searchParams.get("priority") as TaskPriority) || "",
+  );
+  const [projectFilter, setProjectFilter] = useState(
+    searchParams.get("projectId") || "",
   );
   const [sortBy, setSortBy] = useState<SortField>("createdAt");
   const [page, setPage] = useState(1);
@@ -42,7 +48,7 @@ export function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [flashingId, setFlashingId] = useState<string | null>(null);
-  const hasActiveFilters = Boolean(statusFilter || priorityFilter);
+  const hasActiveFilters = Boolean(statusFilter || priorityFilter || projectFilter);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -50,6 +56,7 @@ export function TasksPage() {
       const data = await api.tasks.list({
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
+        projectId: projectFilter || undefined,
         page,
         limit: 20,
       });
@@ -63,11 +70,22 @@ export function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter, page]);
+  }, [statusFilter, priorityFilter, projectFilter, page]);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    let active = true;
+    api.projects.list().then((data) => {
+      if (!active) return;
+      setProjects(Array.isArray(data) ? data : data.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Listen for keyboard shortcut to create new task
   useEffect(() => {
@@ -82,16 +100,26 @@ export function TasksPage() {
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, priorityFilter]);
+  }, [statusFilter, priorityFilter, projectFilter]);
+
+  useEffect(() => {
+    const nextStatus = (searchParams.get("status") as TaskStatus) || "";
+    const nextPriority = (searchParams.get("priority") as TaskPriority) || "";
+    const nextProject = searchParams.get("projectId") || "";
+    if (nextStatus !== statusFilter) setStatusFilter(nextStatus);
+    if (nextPriority !== priorityFilter) setPriorityFilter(nextPriority);
+    if (nextProject !== projectFilter) setProjectFilter(nextProject);
+  }, [searchParams, statusFilter, priorityFilter, projectFilter]);
 
   // Update URL params when filters change
   useEffect(() => {
     const params = new URLSearchParams();
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
+    if (projectFilter) params.set("projectId", projectFilter);
     const qs = params.toString();
     router.replace(`/tasks${qs ? "?" + qs : ""}`, { scroll: false });
-  }, [statusFilter, priorityFilter, router]);
+  }, [statusFilter, priorityFilter, projectFilter, router]);
 
   // Open modal when arriving from quick add
   useEffect(() => {
@@ -185,6 +213,25 @@ export function TasksPage() {
     { value: "low", label: "Low", dot: "bg-neutral-400" },
   ];
 
+  const projectOptions = useMemo(() => {
+    const base = [
+      { value: "", label: "All", dot: "bg-neutral-400" },
+      { value: "none", label: "Unassigned", dot: "bg-neutral-300" },
+    ];
+    const mapped = [...projects]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((project) => ({
+        value: project.id,
+        label: project.name,
+        dot: PROJECT_COLORS[project.color]?.dot ?? "bg-neutral-400",
+      }));
+    return [...base, ...mapped];
+  }, [projects]);
+
+  const projectMap = useMemo(() => {
+    return new Map(projects.map((project) => [project.id, project]));
+  }, [projects]);
+
   const sortOptions = [
     { value: "createdAt", label: "Newest" },
     { value: "dueDate", label: "Due Date" },
@@ -233,6 +280,19 @@ export function TasksPage() {
             options={priorityFilterOptions}
             onChange={(v) => setPriorityFilter(v as TaskPriority | "")}
           />
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Project
+            </span>
+            <div className="w-44">
+              <CustomSelect
+                label=""
+                value={projectFilter}
+                onChange={(v: string) => setProjectFilter(v)}
+                options={projectOptions}
+              />
+            </div>
+          </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
@@ -252,6 +312,7 @@ export function TasksPage() {
                 onClick={() => {
                   setStatusFilter("");
                   setPriorityFilter("");
+                  setProjectFilter("");
                 }}
                 className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
               >
@@ -307,6 +368,7 @@ export function TasksPage() {
             <TaskRow
               key={task.id}
               task={task}
+              project={task.projectId ? projectMap.get(task.projectId) ?? null : null}
               index={i}
               isDeleting={deletingId === task.id}
               isFlashing={flashingId === task.id}
@@ -326,6 +388,7 @@ export function TasksPage() {
       {modalOpen && (
         <TaskModal
           task={editingTask}
+          defaultProjectId={editingTask ? undefined : projectFilter || undefined}
           onClose={() => {
             setModalOpen(false);
             setEditingTask(null);
@@ -406,6 +469,7 @@ function FilterGroup({
 
 function TaskRow({
   task,
+  project,
   index,
   isDeleting,
   isFlashing,
@@ -414,6 +478,7 @@ function TaskRow({
   onDelete,
 }: {
   task: Task;
+  project: Project | null;
   index: number;
   isDeleting: boolean;
   isFlashing: boolean;
@@ -474,6 +539,17 @@ function TaskRow({
       </div>
 
       <div className="flex items-center gap-2">
+        {project && (
+          <span
+            title={`Project: ${project.name}`}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+              PROJECT_COLORS[project.color]?.badge ?? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${PROJECT_COLORS[project.color]?.dot ?? "bg-neutral-400"}`} />
+            {project.name}
+          </span>
+        )}
         <span
           title={`Priority: ${task.priority}`}
           className={`text-xs font-medium px-2 py-0.5 rounded-full ${PRIORITY_BADGE[task.priority]}`}

@@ -1,6 +1,6 @@
 import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { db } from "@/db";
-import { tasks } from "@/db/schema";
+import { tasks, projects } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
 const VALID_STATUSES = ["open", "in_progress", "done"] as const;
@@ -35,7 +35,7 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { title, description, status, priority, dueDate } = body as Record<string, unknown>;
+  const { title, description, status, priority, dueDate, projectId } = body as Record<string, unknown>;
 
   if (title !== undefined && (typeof title !== "string" || title.trim().length === 0)) {
     return errorResponse("title must be a non-empty string", 400);
@@ -69,6 +69,24 @@ export const PUT = withAuth(async (req, session, ctx) => {
     return errorResponse("dueDate must be a string (ISO date) or null", 400);
   }
 
+  if (projectId !== undefined && projectId !== null && typeof projectId !== "string") {
+    return errorResponse("projectId must be a string or null", 400);
+  }
+
+  let resolvedProjectId: string | null | undefined = undefined;
+  if (projectId === null) {
+    resolvedProjectId = null;
+  } else if (projectId !== undefined) {
+    const [project] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(and(eq(projects.id, projectId as string), eq(projects.userId, session.user!.id!)));
+    if (!project) {
+      return errorResponse("projectId does not match an existing project", 400);
+    }
+    resolvedProjectId = projectId as string;
+  }
+
   // Check task exists and belongs to user
   const [existing] = await db
     .select({ id: tasks.id })
@@ -85,6 +103,7 @@ export const PUT = withAuth(async (req, session, ctx) => {
   if (status !== undefined) updates.status = status;
   if (priority !== undefined) updates.priority = priority;
   if (dueDate !== undefined) updates.dueDate = dueDate;
+  if (projectId !== undefined) updates.projectId = resolvedProjectId;
 
   const [updated] = await db
     .update(tasks)

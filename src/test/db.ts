@@ -44,9 +44,24 @@ export function createTestDb() {
       "expires" integer NOT NULL
     );
 
+    CREATE TABLE "project" (
+      "id" text PRIMARY KEY NOT NULL,
+      "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+      "name" text NOT NULL,
+      "description" text,
+      "status" text NOT NULL DEFAULT 'active',
+      "color" text NOT NULL DEFAULT 'blue',
+      "createdAt" text NOT NULL DEFAULT (current_timestamp),
+      "updatedAt" text NOT NULL DEFAULT (current_timestamp)
+    );
+
+    CREATE INDEX "project_userId_idx" ON "project" ("userId");
+    CREATE INDEX "project_status_idx" ON "project" ("status");
+
     CREATE TABLE "task" (
       "id" text PRIMARY KEY NOT NULL,
       "userId" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE,
+      "projectId" text REFERENCES "project"("id") ON DELETE SET NULL,
       "title" text NOT NULL,
       "description" text,
       "status" text NOT NULL DEFAULT 'open',
@@ -57,6 +72,7 @@ export function createTestDb() {
     );
 
     CREATE INDEX "task_userId_idx" ON "task" ("userId");
+    CREATE INDEX "task_projectId_idx" ON "task" ("projectId");
     CREATE INDEX "task_status_idx" ON "task" ("status");
     CREATE INDEX "task_priority_idx" ON "task" ("priority");
 

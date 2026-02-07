@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { tasks, notes, dispatches, dispatchTasks, users } from "./schema";
+import { tasks, notes, dispatches, dispatchTasks, users, projects } from "./schema";
 import { eq } from "drizzle-orm";
 
 const sqlite = new Database("./dispatch.db");
@@ -38,21 +38,48 @@ async function seed() {
   await db.delete(dispatches).where(eq(dispatches.userId, userId));
   await db.delete(tasks).where(eq(tasks.userId, userId));
   await db.delete(notes).where(eq(notes.userId, userId));
+  await db.delete(projects).where(eq(projects.userId, userId));
 
   const now = new Date().toISOString();
 
+  // Create projects
+  const projectData = [
+    { name: "Website Revamp", description: "Refresh the marketing site and landing pages", status: "active" as const, color: "blue" as const },
+    { name: "Product Launch", description: "Prepare for the next release cycle", status: "active" as const, color: "emerald" as const },
+    { name: "Internal Ops", description: "Quality and tooling improvements", status: "paused" as const, color: "amber" as const },
+  ];
+
+  const createdProjects = await db
+    .insert(projects)
+    .values(
+      projectData.map((p) => ({
+        userId,
+        name: p.name,
+        description: p.description,
+        status: p.status,
+        color: p.color,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    )
+    .returning();
+
+  console.log(`Created ${createdProjects.length} projects`);
+
+  const [website, launch, ops] = createdProjects;
+
   // Create 10 tasks
   const taskData = [
-    { title: "Set up CI/CD pipeline", description: "Configure GitHub Actions for automated testing and deployment", status: "open" as const, priority: "high" as const, dueDate: todayStr(1) },
-    { title: "Design landing page mockup", description: "Create wireframes for the new marketing site", status: "in_progress" as const, priority: "high" as const, dueDate: todayStr(0) },
-    { title: "Write API documentation", description: "Document all REST endpoints with examples", status: "open" as const, priority: "medium" as const, dueDate: todayStr(3) },
-    { title: "Fix login redirect bug", description: "Users redirected to wrong page after OAuth login", status: "done" as const, priority: "high" as const, dueDate: todayStr(-2) },
-    { title: "Add dark mode support", description: "Implement theme toggle with system preference detection", status: "in_progress" as const, priority: "medium" as const, dueDate: todayStr(5) },
-    { title: "Review pull requests", description: null, status: "open" as const, priority: "medium" as const, dueDate: todayStr(0) },
-    { title: "Update dependencies", description: "Run npm audit and update outdated packages", status: "open" as const, priority: "low" as const, dueDate: todayStr(7) },
-    { title: "Write unit tests for auth module", description: "Cover edge cases: expired tokens, invalid sessions", status: "open" as const, priority: "medium" as const, dueDate: todayStr(4) },
-    { title: "Optimize database queries", description: "Add indexes and reduce N+1 queries on dashboard", status: "done" as const, priority: "low" as const, dueDate: null },
-    { title: "Plan sprint retrospective", description: "Prepare agenda and gather team feedback", status: "open" as const, priority: "low" as const, dueDate: todayStr(2) },
+    { title: "Set up CI/CD pipeline", description: "Configure GitHub Actions for automated testing and deployment", status: "open" as const, priority: "high" as const, dueDate: todayStr(1), projectId: ops?.id },
+    { title: "Design landing page mockup", description: "Create wireframes for the new marketing site", status: "in_progress" as const, priority: "high" as const, dueDate: todayStr(0), projectId: website?.id },
+    { title: "Write API documentation", description: "Document all REST endpoints with examples", status: "open" as const, priority: "medium" as const, dueDate: todayStr(3), projectId: launch?.id },
+    { title: "Fix login redirect bug", description: "Users redirected to wrong page after OAuth login", status: "done" as const, priority: "high" as const, dueDate: todayStr(-2), projectId: ops?.id },
+    { title: "Add dark mode support", description: "Implement theme toggle with system preference detection", status: "in_progress" as const, priority: "medium" as const, dueDate: todayStr(5), projectId: website?.id },
+    { title: "Review pull requests", description: null, status: "open" as const, priority: "medium" as const, dueDate: todayStr(0), projectId: launch?.id },
+    { title: "Update dependencies", description: "Run npm audit and update outdated packages", status: "open" as const, priority: "low" as const, dueDate: todayStr(7), projectId: ops?.id },
+    { title: "Write unit tests for auth module", description: "Cover edge cases: expired tokens, invalid sessions", status: "open" as const, priority: "medium" as const, dueDate: todayStr(4), projectId: launch?.id },
+    { title: "Optimize database queries", description: "Add indexes and reduce N+1 queries on dashboard", status: "done" as const, priority: "low" as const, dueDate: null, projectId: ops?.id },
+    { title: "Plan sprint retrospective", description: "Prepare agenda and gather team feedback", status: "open" as const, priority: "low" as const, dueDate: todayStr(2), projectId: website?.id },
   ];
 
   const createdTasks = await db
@@ -60,6 +87,7 @@ async function seed() {
     .values(
       taskData.map((t) => ({
         userId,
+        projectId: t.projectId ?? null,
         title: t.title,
         description: t.description,
         status: t.status,

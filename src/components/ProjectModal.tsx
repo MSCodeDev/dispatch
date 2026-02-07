@@ -1,58 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  api,
-  type Task,
-  type TaskStatus,
-  type TaskPriority,
-  type Project,
-} from "@/lib/client";
+import { useState } from "react";
+import { api, type Project, type ProjectStatus } from "@/lib/client";
 import { CustomSelect } from "@/components/CustomSelect";
-import { PROJECT_COLORS } from "@/lib/projects";
+import { PROJECT_COLOR_OPTIONS, PROJECT_STATUS_OPTIONS } from "@/lib/projects";
 
-export function TaskModal({
-  task,
-  defaultProjectId,
+export function ProjectModal({
+  project,
   onClose,
   onSaved,
 }: {
-  task: Task | null;
-  defaultProjectId?: string;
+  project: Project | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const isEditing = task !== null;
+  const isEditing = project !== null;
 
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [description, setDescription] = useState(task?.description ?? "");
-  const [status, setStatus] = useState<TaskStatus>(task?.status ?? "open");
-  const [priority, setPriority] = useState<TaskPriority>(
-    task?.priority ?? "medium",
+  const [name, setName] = useState(project?.name ?? "");
+  const [description, setDescription] = useState(project?.description ?? "");
+  const [status, setStatus] = useState<ProjectStatus>(
+    project?.status ?? "active",
   );
-  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
-  const [projectId, setProjectId] = useState(
-    task?.projectId ?? defaultProjectId ?? "",
-  );
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [color, setColor] = useState(project?.color ?? "blue");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
-    api.projects.list().then((data) => {
-      if (!active) return;
-      setProjects(Array.isArray(data) ? data : data.data);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) {
-      setError("Title is required.");
+    if (!name.trim()) {
+      setError("Project name is required.");
       return;
     }
 
@@ -61,70 +37,41 @@ export function TaskModal({
 
     try {
       if (isEditing) {
-        await api.tasks.update(task.id, {
-          title: title.trim(),
+        await api.projects.update(project.id, {
+          name: name.trim(),
           description: description || undefined,
           status,
-          priority,
-          dueDate: dueDate || null,
-          projectId: projectId || null,
+          color,
         });
       } else {
-        await api.tasks.create({
-          title: title.trim(),
+        await api.projects.create({
+          name: name.trim(),
           description: description || undefined,
           status,
-          priority,
-          dueDate: dueDate || undefined,
-          projectId: projectId || null,
+          color,
         });
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save task");
+      setError(err instanceof Error ? err.message : "Failed to save project");
     } finally {
       setSaving(false);
     }
   }
 
-  const statusOptions = [
-    { value: "open", label: "Open", dot: "bg-blue-500" },
-    { value: "in_progress", label: "In Progress", dot: "bg-yellow-500" },
-    { value: "done", label: "Done", dot: "bg-green-500" },
-  ];
-
-  const priorityOptions = [
-    { value: "low", label: "Low", dot: "bg-neutral-400" },
-    { value: "medium", label: "Medium", dot: "bg-yellow-500" },
-    { value: "high", label: "High", dot: "bg-red-500" },
-  ];
-
-  const projectOptions = [
-    { value: "", label: "No Project", dot: "bg-neutral-300" },
-    ...projects
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((project) => ({
-        value: project.id,
-        label: project.name,
-        dot: PROJECT_COLORS[project.color]?.dot ?? "bg-neutral-400",
-      })),
-  ];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 animate-backdrop-enter"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <form
         onSubmit={handleSubmit}
         className="relative w-full max-w-lg rounded-xl bg-white dark:bg-neutral-900 p-6 shadow-xl space-y-4 animate-modal-enter"
       >
         <h2 className="text-lg font-semibold dark:text-white">
-          {isEditing ? "Edit Task" : "New Task"}
+          {isEditing ? "Edit Project" : "New Project"}
         </h2>
 
         {error && (
@@ -135,12 +82,12 @@ export function TaskModal({
 
         <div>
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Title
+            Name
           </label>
           <input
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
             autoFocus
           />
@@ -162,35 +109,15 @@ export function TaskModal({
           <CustomSelect
             label="Status"
             value={status}
-            onChange={(v: string) => setStatus(v as TaskStatus)}
-            options={statusOptions}
+            onChange={(v: string) => setStatus(v as ProjectStatus)}
+            options={PROJECT_STATUS_OPTIONS}
           />
-
           <CustomSelect
-            label="Priority"
-            value={priority}
-            onChange={(v: string) => setPriority(v as TaskPriority)}
-            options={priorityOptions}
+            label="Color"
+            value={color}
+            onChange={(v: string) => setColor(v)}
+            options={PROJECT_COLOR_OPTIONS}
           />
-
-          <CustomSelect
-            label="Project"
-            value={projectId}
-            onChange={(v: string) => setProjectId(v)}
-            options={projectOptions}
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-              Due Date
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
-            />
-          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
