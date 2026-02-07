@@ -1,5 +1,5 @@
 import * as p from "@clack/prompts";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -76,27 +76,12 @@ async function main() {
   }
 
   // ── 1. AUTH_SECRET ───────────────────────────────────────────
-  const authMethod = await p.select({
-    message: "AUTH_SECRET — used to sign session tokens",
-    options: [
-      { value: "generate", label: "Auto-generate a secure secret", hint: "recommended" },
-      { value: "custom", label: "Enter my own secret" },
-    ],
+  const authSecretInput = await p.password({
+    message: "Paste your AUTH_SECRET (min 16 chars):",
+    validate: (v) => (v.length < 16 ? "Must be at least 16 characters" : undefined),
   });
-  onCancel(authMethod);
-
-  let authSecret: string;
-  if (authMethod === "generate") {
-    authSecret = randomBytes(32).toString("base64url");
-    p.log.success(`Generated: ${c.dim(authSecret.slice(0, 16) + "...")}`);
-  } else {
-    const custom = await p.text({
-      message: "Enter your AUTH_SECRET:",
-      validate: (v) => (v.length < 16 ? "Must be at least 16 characters" : undefined),
-    });
-    onCancel(custom);
-    authSecret = custom as string;
-  }
+  onCancel(authSecretInput);
+  const authSecret = authSecretInput as string;
 
   // ── 2. GITHUB OAUTH ─────────────────────────────────────────
   const useGitHub = await p.confirm({
@@ -113,8 +98,8 @@ async function main() {
       [
         "To create a GitHub OAuth App:",
         "",
-        `  1. Visit ${c.underline("https://github.com/settings/developers")}`,
-        `  2. Click ${c.bold('"New OAuth App"')}`,
+        `  1. Go to ${c.underline("https://github.com/settings/developers")}`,
+        `  2. Click ${c.bold("New OAuth App")}`,
         "  3. Fill in the form:",
         "",
         `     Application name:    ${c.cyan("Dispatch")}`,
@@ -129,7 +114,7 @@ async function main() {
     );
 
     const id = await p.text({
-      message: "GitHub Client ID:",
+      message: "Paste GitHub Client ID:",
       placeholder: "Ov23li...",
       validate: (v) => (v.length === 0 ? "Required" : undefined),
     });
@@ -137,7 +122,7 @@ async function main() {
     githubId = id as string;
 
     const secret = await p.password({
-      message: "GitHub Client Secret:",
+      message: "Paste GitHub Client Secret:",
       validate: (v) => (v.length === 0 ? "Required" : undefined),
     });
     onCancel(secret);
@@ -293,6 +278,19 @@ async function main() {
     nextSteps.push("", `Sign in with: ${c.bold(accountEmail)}`);
   }
   p.note(nextSteps.join("\n"), "Next Steps");
+
+  const runServerNow = await p.confirm({
+    message: "Run the development server now? (npm run dev)",
+    initialValue: true,
+  });
+  onCancel(runServerNow);
+
+  if (runServerNow) {
+    p.outro(c.green("Setup complete! Starting development server..."));
+    p.log.info("Starting development server...");
+    execSync("npm run dev", { stdio: "inherit", cwd: process.cwd() });
+    return;
+  }
 
   p.outro(c.green("Setup complete! Happy dispatching."));
 }
