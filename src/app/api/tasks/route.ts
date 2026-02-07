@@ -1,0 +1,92 @@
+import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
+import { db } from "@/db";
+import { tasks } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+
+const VALID_STATUSES = ["open", "in_progress", "done"] as const;
+const VALID_PRIORITIES = ["low", "medium", "high"] as const;
+
+/** GET /api/tasks — list tasks for the current user, with optional filters */
+export const GET = withAuth(async (req, session) => {
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status");
+  const priority = url.searchParams.get("priority");
+
+  const conditions = [eq(tasks.userId, session.user!.id!)];
+
+  if (status) {
+    if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
+      return errorResponse(`Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`, 400);
+    }
+    conditions.push(eq(tasks.status, status as typeof VALID_STATUSES[number]));
+  }
+
+  if (priority) {
+    if (!VALID_PRIORITIES.includes(priority as typeof VALID_PRIORITIES[number])) {
+      return errorResponse(`Invalid priority. Must be one of: ${VALID_PRIORITIES.join(", ")}`, 400);
+    }
+    conditions.push(eq(tasks.priority, priority as typeof VALID_PRIORITIES[number]));
+  }
+
+  const results = await db
+    .select()
+    .from(tasks)
+    .where(and(...conditions))
+    .orderBy(tasks.createdAt);
+
+  return jsonResponse(results);
+});
+
+/** POST /api/tasks — create a new task */
+export const POST = withAuth(async (req, session) => {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return errorResponse("Invalid JSON body", 400);
+  }
+
+  const { title, description, status, priority, dueDate } = body as Record<string, unknown>;
+
+  if (!title || typeof title !== "string" || title.trim().length === 0) {
+    return errorResponse("title is required and must be a non-empty string", 400);
+  }
+
+  if (description !== undefined && typeof description !== "string") {
+    return errorResponse("description must be a string", 400);
+  }
+
+  if (status !== undefined) {
+    if (!VALID_STATUSES.includes(status as typeof VALID_STATUSES[number])) {
+      return errorResponse(`Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`, 400);
+    }
+  }
+
+  if (priority !== undefined) {
+    if (!VALID_PRIORITIES.includes(priority as typeof VALID_PRIORITIES[number])) {
+      return errorResponse(`Invalid priority. Must be one of: ${VALID_PRIORITIES.join(", ")}`, 400);
+    }
+  }
+
+  if (dueDate !== undefined && typeof dueDate !== "string") {
+    return errorResponse("dueDate must be a string (ISO date)", 400);
+  }
+
+  const now = new Date().toISOString();
+
+  const [task] = await db
+    .insert(tasks)
+    .values({
+      userId: session.user!.id!,
+      title: (title as string).trim(),
+      description: description as string | undefined,
+      status: (status as typeof VALID_STATUSES[number]) ?? "open",
+      priority: (priority as typeof VALID_PRIORITIES[number]) ?? "medium",
+      dueDate: dueDate as string | undefined,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+
+  return jsonResponse(task, 201);
+});

@@ -5,16 +5,17 @@ import type { Session } from "next-auth";
 /**
  * Wraps an API route handler with authentication.
  * Returns 401 if the user is not authenticated.
+ * Passes through the route context (contains `params` for dynamic segments).
  */
 export function withAuth(
-  handler: (req: Request, session: Session) => Promise<NextResponse>
+  handler: (req: Request, session: Session, ctx: unknown) => Promise<NextResponse>
 ) {
-  return async (req: Request) => {
+  return async (req: Request, ctx: unknown) => {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return handler(req, session);
+    return handler(req, session, ctx);
   };
 }
 
