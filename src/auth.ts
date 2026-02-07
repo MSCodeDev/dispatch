@@ -7,6 +7,26 @@ import { users, accounts, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
+function isStaleJwtSecretError(code: string, details: unknown[]): boolean {
+  if (code !== "JWTSessionError") return false;
+
+  const hasSecretMismatchText = (value: unknown): boolean => {
+    if (typeof value === "string") {
+      return value.toLowerCase().includes("no matching decryption secret");
+    }
+    if (!value || typeof value !== "object") return false;
+
+    const obj = value as Record<string, unknown>;
+    return (
+      hasSecretMismatchText(obj.message) ||
+      hasSecretMismatchText(obj.cause) ||
+      hasSecretMismatchText(obj.error)
+    );
+  };
+
+  return details.some(hasSecretMismatchText);
+}
+
 const providers = [];
 
 // Only add GitHub if credentials are configured
@@ -51,6 +71,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Always use JWT — the adapter still persists users/accounts on OAuth sign-in,
   // but JWT avoids the incompatibility between Credentials provider and database sessions.
   session: { strategy: "jwt" },
+  logger: {
+    error(code, ...message) {
+      // Ignore one-time stale session cookies after AUTH_SECRET rotations.
+      if (isStaleJwtSecretError(code, message)) return;
+      console.error(`[auth][error] ${code}`, ...message);
+    },
+  },
   callbacks: {
     async signIn({ user, account }) {
       // Block sign-in if the user record wasn't created (shouldn't happen, but guard)
