@@ -12,7 +12,7 @@ import {
 import { TaskModal } from "@/components/TaskModal";
 import { CustomSelect } from "@/components/CustomSelect";
 import { useToast } from "@/components/ToastProvider";
-import { IconPlus, IconPencil, IconTrash } from "@/components/icons";
+import { IconCheckCircle, IconPlus, IconPencil, IconTrash } from "@/components/icons";
 import { PROJECT_COLORS } from "@/lib/projects";
 
 type SortField = "createdAt" | "dueDate" | "priority";
@@ -352,17 +352,22 @@ export function TasksPage() {
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold dark:text-white">Tasks</h1>
-          {!loading && tasks.length > 0 && (
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              <span className="text-blue-600 dark:text-blue-400 font-medium">{openCount} open</span>
-              <span className="mx-1.5">&middot;</span>
-              <span className="text-yellow-600 dark:text-yellow-400 font-medium">{inProgressCount} in progress</span>
-              <span className="mx-1.5">&middot;</span>
-              <span className="text-green-600 dark:text-green-400 font-medium">{doneCount} done</span>
-            </p>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <IconCheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold dark:text-white">Tasks</h1>
+            {!loading && tasks.length > 0 && (
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                <span className="text-blue-600 dark:text-blue-400 font-medium">{openCount} open</span>
+                <span className="mx-1.5">&middot;</span>
+                <span className="text-yellow-600 dark:text-yellow-400 font-medium">{inProgressCount} in progress</span>
+                <span className="mx-1.5">&middot;</span>
+                <span className="text-green-600 dark:text-green-400 font-medium">{doneCount} done</span>
+              </p>
+            )}
+          </div>
         </div>
         <button
           onClick={() => {

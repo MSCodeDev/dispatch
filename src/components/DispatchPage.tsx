@@ -10,6 +10,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { DispatchHistoryOverlay } from "@/components/DispatchHistoryOverlay";
 import {
+  IconBolt,
   IconCalendar,
   IconCheck,
   IconCheckCircle,
@@ -279,18 +280,23 @@ export function DispatchPage() {
           >
             &larr;
           </button>
-          <div>
-            <h1 className="text-2xl font-bold dark:text-white">
-              {isToday ? "Today's Dispatch" : "Dispatch"}
-            </h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+              <IconBolt className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold dark:text-white">
+                {isToday ? "Today's Dispatch" : "Dispatch"}
+              </h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                {new Date(date + "T00:00:00").toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            </div>
           </div>
           <button
             onClick={() => navigateDay(1)}
