@@ -6,7 +6,7 @@
     Provides commands to set up, start, update, and manage your Dispatch instance.
 
 .PARAMETER Command
-    The command to run: setup, dev, start, build, update, seed, studio, test, help
+    The command to run: setup, dev, start, build, update, seed, studio, test, resetdb, help
 
 .EXAMPLE
     .\dispatch-dev.ps1 setup
@@ -16,7 +16,7 @@
 
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("setup", "dev", "start", "build", "update", "seed", "studio", "test", "lint", "help", "version", "")]
+    [ValidateSet("setup", "dev", "start", "build", "update", "seed", "studio", "test", "lint", "resetdb", "help", "version", "")]
     [string]$Command = ""
 )
 
@@ -72,6 +72,7 @@ function Show-Help {
         @{ Cmd = "studio";  Desc = "Open Drizzle Studio (database GUI)" }
         @{ Cmd = "test";    Desc = "Run the test suite" }
         @{ Cmd = "lint";    Desc = "Run ESLint" }
+        @{ Cmd = "resetdb"; Desc = "Remove dev Docker volumes (fresh SQLite state)" }
         @{ Cmd = "version"; Desc = "Show version number" }
         @{ Cmd = "help";    Desc = "Show this help message" }
     )
@@ -208,6 +209,32 @@ function Invoke-Lint {
     npm run lint
 }
 
+function Invoke-ResetDb {
+    Show-Logo
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        Write-RedLn "  Docker is not installed or not on PATH."
+        exit 1
+    }
+
+    Write-YellowLn "  Removing dev Docker containers and volumes..."
+    Write-Host ""
+    Set-Location $PSScriptRoot
+
+    if (Test-Path "$PSScriptRoot\.env.local") {
+        docker compose -f docker-compose.dev.yml --env-file .env.local down -v --remove-orphans
+    } else {
+        docker compose -f docker-compose.dev.yml down -v --remove-orphans
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-RedLn "  Failed to reset dev Docker data."
+        exit $LASTEXITCODE
+    }
+
+    Write-GreenLn "  Dev Docker data reset complete."
+    Write-Host ""
+}
+
 # ── Route ─────────────────────────────────────────────────────
 switch ($Command) {
     "setup"   { Invoke-Setup }
@@ -219,6 +246,7 @@ switch ($Command) {
     "studio"  { Invoke-Studio }
     "test"    { Invoke-Test }
     "lint"    { Invoke-Lint }
+    "resetdb" { Invoke-ResetDb }
     "version" { Write-Host "Dispatch v$Version" }
     "help"    { Show-Help }
     default   { Show-Help }
