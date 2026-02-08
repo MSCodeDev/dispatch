@@ -137,6 +137,8 @@ Open `http://localhost:3000`.
 - Seeded account: `test@dispatch.local` / `test`
   - Run `npm run db:seed` first to create the seeded account.
 
+*Dispatch is an independent open-source project and is not affiliated with any other software using the name Dispatch.*
+
 ---
 
 <p align="center">
