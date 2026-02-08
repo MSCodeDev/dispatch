@@ -1,19 +1,12 @@
 services:
   dispatch:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: dispatch:latest
+    image: ghcr.io/nkasco/dispatchtodoapp:latest
     container_name: dispatch
     restart: unless-stopped
     ports:
       - "${DISPATCH_PORT:-3000}:3000"
-    environment:
-      AUTH_SECRET: ${AUTH_SECRET:-dispatch-local-dev-secret-change-me}
-      DATABASE_URL: /app/data/dispatch.db
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
-      AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
+    env_file:
+      - .env.local
     volumes:
       - dispatch-data:/app/data
 
