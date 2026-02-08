@@ -9,6 +9,7 @@ import {
   IconCalendar,
   IconSearch,
   IconList,
+  IconGrid,
 } from "@/components/icons";
 
 const STATUS_BADGES: Record<TaskStatus, string> = {
@@ -202,8 +203,15 @@ export function Dashboard({ userName }: { userName: string }) {
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-8">
       <div className="animate-fade-in-up">
-        <h1 className="text-2xl font-bold dark:text-white">Dashboard</h1>
-        <p className="mt-1 text-neutral-500 dark:text-neutral-400">Welcome back, {userName}.</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <IconGrid className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold dark:text-white">Dashboard</h1>
+            <p className="mt-1 text-neutral-500 dark:text-neutral-400">Welcome back, {userName}.</p>
+          </div>
+        </div>
       </div>
 
       {/* Search */}

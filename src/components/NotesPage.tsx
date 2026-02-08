@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { api, type Note } from "@/lib/client";
 import { Pagination } from "@/components/Pagination";
 import { useToast } from "@/components/ToastProvider";
-import { IconGrid, IconList, IconPlus, IconTrash } from "@/components/icons";
+import { IconDocument, IconGrid, IconList, IconPlus, IconTrash } from "@/components/icons";
 
 export function NotesPage() {
   const router = useRouter();
@@ -109,13 +109,18 @@ export function NotesPage() {
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold dark:text-white">Notes</h1>
-          {!loading && notes.length > 0 && (
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-              <span className="font-medium">{notes.length}</span> note{notes.length !== 1 ? "s" : ""}
-            </p>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
+            <IconDocument className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold dark:text-white">Notes</h1>
+            {!loading && notes.length > 0 && (
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                <span className="font-medium">{notes.length}</span> note{notes.length !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
         </div>
         <button
           onClick={handleCreate}
