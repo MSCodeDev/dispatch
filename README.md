@@ -61,7 +61,13 @@ flowchart LR
 
 ### Docker Setup (Recommended)
 
-Dispatch includes production launchers that create/update `.env.local` and run Docker Compose without npm.
+Dispatch includes production launchers that create/update `.env.local` and run Docker Compose.
+
+Prerequisites:
+
+- Docker Desktop (Windows/macOS) or Docker Engine + Compose plugin (Linux)
+- `docker` available on your `PATH`, with Docker running before setup
+- Internet access to pull the default image (`ghcr.io/nkasco/dispatchtodoapp:latest`)
 
 Use one of the following:
 
