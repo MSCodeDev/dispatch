@@ -61,7 +61,7 @@ flowchart LR
 
 ### Docker Setup (Recommended)
 
-Dispatch includes production launchers that create/update `.env.local` and run Docker Compose.
+Dispatch includes production launchers that create/update `.env.prod` and run Docker Compose.
 
 Prerequisites:
 
@@ -78,6 +78,15 @@ Use one of the following:
 ```bash
 ./dispatch.sh setup
 ```
+
+GitHub Auth in Docker:
+
+- During setup, choose `Enable GitHub OAuth sign-in?` and provide `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET`.
+- Set `NEXTAUTH_URL` to the public URL users will open in the browser.
+- If this runs on a dedicated server in your home/lab network, use the server hostname or LAN IP in `NEXTAUTH_URL` instead of `localhost`.
+- In GitHub OAuth app settings, set the callback URL to:
+  - `<NEXTAUTH_URL>/api/auth/callback/github`
+  - Example: `http://dispatch-server:3000/api/auth/callback/github`
 
 ## Local Development - Prerequisites
 
@@ -100,7 +109,9 @@ npm install
 
 ### 2. Configure env
 
-Create `.env.local`:
+Create `.env.local` (local Node.js/dev runtime only):
+
+> Docker setup uses `.env.prod`, not `.env.local`.
 
 ```bash
 # Required for NextAuth
@@ -131,17 +142,9 @@ Open `http://localhost:3000`.
 
 ### Dev Login (Optional)
 
+- Run `npm run db:seed` first to create the seeded account.
 - Seeded account: `test@dispatch.local` / `test`
 - Or create a local account from the login page
-
-## Tech Stack
-
-- Next.js App Router
-- React 19 + TypeScript
-- NextAuth v5
-- Drizzle ORM + better-sqlite3
-- Tailwind CSS v4
-- Vitest
 
 ---
 
