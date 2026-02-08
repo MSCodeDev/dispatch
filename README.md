@@ -143,17 +143,32 @@ On startup, the container automatically runs `npm run db:push` before launching 
 
 ### Recommended: Docker Compose
 
-This repo includes `docker-compose.yml` for the fastest setup.
+This repo includes two compose files:
 
-1. Start it:
+- `docker-compose.yml` - runs the published image from GHCR (`ghcr.io/nkasco/dispatchtodoapp:latest`)
+- `docker-compose.dev.yml` - builds an image from your local source (for development/testing)
+
+1. Start the published image:
 
 ```powershell
-docker compose up -d --build
+docker compose up -d
 ```
 
-2. Open `http://localhost:3000`.
+If you keep secrets in `.env.local`, pass it explicitly:
 
-3. Useful compose commands:
+```powershell
+docker compose --env-file .env.local up -d
+```
+
+2. Build and run local source instead:
+
+```powershell
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+3. Open `http://localhost:3000`.
+
+4. Useful compose commands:
 
 ```powershell
 docker compose logs -f
@@ -166,13 +181,19 @@ Optional overrides:
 
 - `AUTH_SECRET` (recommended to set your own value)
 - `NEXTAUTH_URL` (defaults to `http://localhost:3000`)
+- `AUTH_TRUST_HOST` (defaults to `true` for Docker)
+- `DISPATCH_PORT` (defaults to `3000`)
 
 For overrides, create a local `.env` file next to `docker-compose.yml`:
 
 ```env
 AUTH_SECRET=replace-with-a-long-random-secret
 NEXTAUTH_URL=http://localhost:3000
+AUTH_TRUST_HOST=true
+DISPATCH_PORT=3000
 ```
+
+Important: avoid setting `DATABASE_URL=./dispatch.db` for containers. Compose already pins it to `/app/data/dispatch.db` so SQLite persists in the Docker volume.
 
 ### Alternative: Docker CLI (`docker run`)
 
@@ -190,6 +211,7 @@ docker build -t dispatch:latest .
 docker run -d --name dispatch `
   -p 3000:3000 `
   -e AUTH_SECRET=replace-with-a-long-random-secret `
+  -e AUTH_TRUST_HOST=true `
   -e NEXTAUTH_URL=http://localhost:3000 `
   -e DATABASE_URL=/app/data/dispatch.db `
   -v dispatch-data:/app/data `

@@ -5,8 +5,13 @@ services:
     restart: unless-stopped
     ports:
       - "${DISPATCH_PORT:-3000}:3000"
-    env_file:
-      - .env.local
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-dispatch-local-prod-secret-change-me}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      DATABASE_URL: /app/data/dispatch.db
+      AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
+      AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
     volumes:
       - dispatch-data:/app/data
 
