@@ -13,10 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="#prerequisites">Prerequisites</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#docker-deployment">Docker Deployment</a> •
   <a href="#docker-setup-no-npm-recommended">Docker Setup</a> •
+  <a href="#local-development-prerequisites">Local Dev Prerequisites</a> •
   <a href="#feature-tour">Feature Tour</a> •
   <a href="#tech-stack">Tech Stack</a> •
   <a href="#scripts">Scripts</a>
@@ -62,19 +61,6 @@ flowchart LR
     ORM --> DB[(SQLite on disk)]
 ```
 
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) `20.9+` (LTS recommended).  
-  Node includes [npm](https://www.npmjs.com/), which is required for local development commands (`npm run dev`, `npm run build`) and `dispatch-dev.*` scripts.
-- [Git](https://git-scm.com/downloads) (required if you use the `update` launcher command or want to pull latest changes).
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (required for Docker-based runs below).
-- Shell support for launcher scripts:
-  - Windows: [PowerShell](https://learn.microsoft.com/powershell/) for `dispatch.ps1` (built into modern Windows).
-  - macOS/Linux: Bash for `dispatch.sh`.
-- If native module install fails (for `better-sqlite3`), install platform build tools:
-  - Windows: [Visual Studio Build Tools (C++ workload)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-  - macOS: Xcode Command Line Tools (`xcode-select --install`)
-
 ## Quick Start
 
 ### Docker Setup (No npm, Recommended)
@@ -112,6 +98,17 @@ npm run setup
 ```
 
 If `.env.local` already exists, the setup wizard asks before overwriting anything.
+
+## Local Development Prerequisites
+
+Use this section only if you are running Dispatch locally with Node.js (`npm run dev`, `npm run build`, `npm run start`).
+
+- [Node.js](https://nodejs.org/) `20.9+` (LTS recommended).  
+  Node includes [npm](https://www.npmjs.com/), which is required for local development commands.
+- [Git](https://git-scm.com/downloads) (recommended for pulling updates).
+- If native module install fails (for `better-sqlite3`), install platform build tools:
+  - Windows: [Visual Studio Build Tools (C++ workload)](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  - macOS: Xcode Command Line Tools (`xcode-select --install`)
 
 ### Manual Setup (Alternative)
 
@@ -152,108 +149,6 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Docker Deployment
-
-Use this when you want to run Dispatch as a container with persistent SQLite data.
-On startup, the container automatically runs `npm run db:push` before launching the app.
-
-### Recommended: Docker Compose
-
-This repo includes two compose files:
-
-- `docker-compose.yml` - runs the published image from GHCR (`ghcr.io/nkasco/dispatchtodoapp:latest` by default, overrideable)
-- `docker-compose.dev.yml` - builds an image from your local source (for development/testing)
-
-1. Start the published image:
-
-```powershell
-docker compose up -d
-```
-
-If you keep secrets in `.env.local`, pass it explicitly:
-
-```powershell
-docker compose --env-file .env.local up -d
-```
-
-2. Build and run local source instead:
-
-```powershell
-docker compose -f docker-compose.dev.yml up -d --build
-```
-
-3. Open `http://localhost:3000`.
-
-4. Useful compose commands:
-
-```powershell
-docker compose logs -f
-docker compose stop
-docker compose start
-docker compose down
-```
-
-Optional overrides:
-
-- `AUTH_SECRET` (recommended to set your own value)
-- `NEXTAUTH_URL` (defaults to `http://localhost:3000`)
-- `AUTH_TRUST_HOST` (defaults to `true` for Docker)
-- `DISPATCH_PORT` (defaults to `3000`)
-- `DISPATCH_IMAGE` (published image override for `docker-compose.yml`)
-- `DISPATCH_DEV_IMAGE` (local dev image tag override for `docker-compose.dev.yml`)
-
-For overrides, create a local `.env` file next to `docker-compose.yml`:
-
-```env
-AUTH_SECRET=replace-with-a-long-random-secret
-NEXTAUTH_URL=http://localhost:3000
-AUTH_TRUST_HOST=true
-DISPATCH_PORT=3000
-DISPATCH_IMAGE=ghcr.io/nkasco/dispatchtodoapp:latest
-DISPATCH_DEV_IMAGE=dispatch:latest
-```
-
-Important: avoid setting `DATABASE_URL=./dispatch.db` for containers. Compose already pins it to `/app/data/dispatch.db` so SQLite persists in the Docker volume.
-
-### Alternative: Docker CLI (`docker run`)
-
-Use this if you prefer a single explicit command instead of Compose.
-
-1. Build image:
-
-```powershell
-docker build -t dispatch:latest .
-```
-
-2. Run container:
-
-```powershell
-docker run -d --name dispatch `
-  -p 3000:3000 `
-  -e AUTH_SECRET=replace-with-a-long-random-secret `
-  -e AUTH_TRUST_HOST=true `
-  -e NEXTAUTH_URL=http://localhost:3000 `
-  -e DATABASE_URL=/app/data/dispatch.db `
-  -v dispatch-data:/app/data `
-  dispatch:latest
-```
-
-Optional GitHub OAuth env vars:
-
-- `-e AUTH_GITHUB_ID=your_github_client_id`
-- `-e AUTH_GITHUB_SECRET=your_github_client_secret`
-
-3. Useful container commands:
-
-```powershell
-docker logs -f dispatch
-docker stop dispatch
-docker start dispatch
-docker rm -f dispatch
-```
-
-Both methods persist SQLite data in Docker volume `dispatch-data` even if the container is removed.
-
 ### Dev Login (Optional)
 
 - Seeded account: `test@dispatch.local` / `test`
@@ -281,43 +176,6 @@ Both methods persist SQLite data in Docker volume `dispatch-data` even if the co
 - `npm run db:studio` - Open Drizzle Studio
 - `npm run db:seed` - Seed sample data
 - `npm test` - Run test suite
-
-## Launcher Scripts
-
-Production launchers (Docker, no npm required):
-
-- `.\dispatch.ps1 <command>` (Windows PowerShell)
-- `./dispatch.sh <command>` (Bash)
-- Commands: `setup`, `start`, `stop`, `restart`, `logs`, `status`, `pull`, `down`, `version`, `help`
-
-Developer launchers (Node.js + npm required):
-
-- `.\dispatch-dev.ps1 <command>` (Windows PowerShell)
-- `./dispatch-dev.sh <command>` (Bash)
-- Commands: `setup`, `dev`, `start`, `build`, `update`, `seed`, `studio`, `test`, `lint`, `publish`, `resetdb`, `version`, `help`
-- Full reset setup: `setup full` (removes Dispatch dev containers/volumes/local images, then runs setup)
-
-Example:
-
-```powershell
-.\dispatch.ps1 help
-.\dispatch.ps1 setup
-.\dispatch.ps1 start
-.\dispatch-dev.ps1 setup full
-.\dispatch-dev.ps1 publish
-.\dispatch-dev.ps1 resetdb
-.\dispatch-dev.ps1 dev
-```
-
-```bash
-./dispatch.sh help
-./dispatch.sh setup
-./dispatch.sh start
-./dispatch-dev.sh setup full
-./dispatch-dev.sh publish
-./dispatch-dev.sh resetdb
-./dispatch-dev.sh dev
-```
 
 ---
 
