@@ -15,6 +15,7 @@
 <p align="center">
   <a href="#prerequisites">Prerequisites</a> •
   <a href="#quick-start">Quick Start</a> •
+  <a href="#docker-deployment">Docker Deployment</a> •
   <a href="#interactive-setup-recommended">Interactive Setup</a> •
   <a href="#feature-tour">Feature Tour</a> •
   <a href="#tech-stack">Tech Stack</a> •
@@ -66,6 +67,7 @@ flowchart LR
 - [Node.js](https://nodejs.org/) `20.9+` (LTS recommended).  
   Node includes [npm](https://www.npmjs.com/), which is required for `npm install`, `npm run dev`, and `npm run build`.
 - [Git](https://git-scm.com/downloads) (required if you use the `update` launcher command or want to pull latest changes).
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (required for Docker-based runs below).
 - Shell support for launcher scripts:
   - Windows: [PowerShell](https://learn.microsoft.com/powershell/) for `dispatch.ps1` (built into modern Windows).
   - macOS/Linux: Bash for `dispatch.sh`.
@@ -77,7 +79,7 @@ flowchart LR
 
 ### Interactive Setup (Recommended)
 
-Dispatch includes an interactive setup wizard that creates `.env.local`, initializes the database schema, and can optionally create your first user + seed demo data.
+Dispatch includes an interactive setup wizard that creates `.env.local` and can start Dispatch via Docker Compose.
 
 Use one of the following:
 
@@ -133,6 +135,82 @@ npm run dev
 ```
 
 Open `http://localhost:3000`.
+
+## Docker Deployment
+
+Use this when you want to run Dispatch as a container with persistent SQLite data.
+On startup, the container automatically runs `npm run db:push` before launching the app.
+
+### Recommended: Docker Compose
+
+This repo includes `docker-compose.yml` for the fastest setup.
+
+1. Start it:
+
+```powershell
+docker compose up -d --build
+```
+
+2. Open `http://localhost:3000`.
+
+3. Useful compose commands:
+
+```powershell
+docker compose logs -f
+docker compose stop
+docker compose start
+docker compose down
+```
+
+Optional overrides:
+
+- `AUTH_SECRET` (recommended to set your own value)
+- `NEXTAUTH_URL` (defaults to `http://localhost:3000`)
+
+For overrides, create a local `.env` file next to `docker-compose.yml`:
+
+```env
+AUTH_SECRET=replace-with-a-long-random-secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+### Alternative: Docker CLI (`docker run`)
+
+Use this if you prefer a single explicit command instead of Compose.
+
+1. Build image:
+
+```powershell
+docker build -t dispatch:latest .
+```
+
+2. Run container:
+
+```powershell
+docker run -d --name dispatch `
+  -p 3000:3000 `
+  -e AUTH_SECRET=replace-with-a-long-random-secret `
+  -e NEXTAUTH_URL=http://localhost:3000 `
+  -e DATABASE_URL=/app/data/dispatch.db `
+  -v dispatch-data:/app/data `
+  dispatch:latest
+```
+
+Optional GitHub OAuth env vars:
+
+- `-e AUTH_GITHUB_ID=your_github_client_id`
+- `-e AUTH_GITHUB_SECRET=your_github_client_secret`
+
+3. Useful container commands:
+
+```powershell
+docker logs -f dispatch
+docker stop dispatch
+docker start dispatch
+docker rm -f dispatch
+```
+
+Both methods persist SQLite data in Docker volume `dispatch-data` even if the container is removed.
 
 ### Dev Login (Optional)
 

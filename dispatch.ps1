@@ -63,7 +63,7 @@ function Show-Help {
     Write-Host "  COMMANDS" -ForegroundColor White
 
     $commands = @(
-        @{ Cmd = "setup";   Desc = "Interactive first-time setup (configure .env, database, account)" }
+        @{ Cmd = "setup";   Desc = "Interactive setup (.env + Docker Compose startup)" }
         @{ Cmd = "dev";     Desc = "Start the development server (http://localhost:3000)" }
         @{ Cmd = "start";   Desc = "Start the production server" }
         @{ Cmd = "build";   Desc = "Create a production build" }
