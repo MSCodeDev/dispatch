@@ -18,6 +18,7 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 ENV DATABASE_URL=/app/data/dispatch.db
+ENV AUTH_TRUST_HOST=true
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 --gid nodejs dispatch
