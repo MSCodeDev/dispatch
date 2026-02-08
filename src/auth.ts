@@ -7,8 +7,8 @@ import { users, accounts, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
-function isStaleJwtSecretError(code: string, details: unknown[]): boolean {
-  if (code !== "JWTSessionError") return false;
+function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
+  if (typeof code !== "string" || code !== "JWTSessionError") return false;
 
   const hasSecretMismatchText = (value: unknown): boolean => {
     if (typeof value === "string") {

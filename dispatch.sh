@@ -6,7 +6,7 @@
 #   ./dispatch.sh <command>
 #
 # Commands:
-#   setup    Interactive first-time setup
+#   setup    Interactive setup (.env + Docker Compose startup)
 #   dev      Start the development server
 #   start    Start the production server
 #   build    Create a production build
@@ -67,7 +67,7 @@ show_help() {
     echo ""
     echo -e "  ${BOLD}COMMANDS${RESET}"
 
-    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "setup"   "Interactive first-time setup (configure .env, database, account)"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "setup"   "Interactive setup (.env + Docker Compose startup)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "dev"     "Start the development server (http://localhost:3000)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "start"   "Start the production server"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "build"   "Create a production build"
