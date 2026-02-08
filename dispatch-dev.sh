@@ -15,6 +15,7 @@
 #   studio   Open Drizzle Studio (database GUI)
 #   test     Run the test suite
 #   lint     Run ESLint
+#   resetdb  Remove dev Docker volumes (fresh SQLite state)
 #   version  Show version number
 #   help     Show this help message
 
@@ -76,6 +77,7 @@ show_help() {
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "studio"  "Open Drizzle Studio (database GUI)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "test"    "Run the test suite"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "lint"    "Run ESLint"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "resetdb" "Remove dev Docker volumes (fresh SQLite state)"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "version" "Show version number"
     printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "help"    "Show this help message"
     echo ""
@@ -188,6 +190,25 @@ cmd_lint() {
     npm run lint
 }
 
+cmd_resetdb() {
+    show_logo
+    if ! command -v docker >/dev/null 2>&1; then
+        echo -e "  ${RED}Docker is not installed or not on PATH.${RESET}"
+        exit 1
+    fi
+
+    echo -e "  ${YELLOW}Removing dev Docker containers and volumes...${RESET}"
+    echo ""
+    if [ -f ".env.local" ]; then
+        docker compose -f docker-compose.dev.yml --env-file .env.local down -v --remove-orphans
+    else
+        docker compose -f docker-compose.dev.yml down -v --remove-orphans
+    fi
+    echo ""
+    echo -e "  ${GREEN}Dev Docker data reset complete.${RESET}"
+    echo ""
+}
+
 # ── Route ─────────────────────────────────────────────────────
 COMMAND="${1:-help}"
 
@@ -201,6 +222,7 @@ case "$COMMAND" in
     studio)  cmd_studio ;;
     test)    cmd_test ;;
     lint)    cmd_lint ;;
+    resetdb) cmd_resetdb ;;
     version) echo "Dispatch v${VERSION}" ;;
     help)    show_help ;;
     *)

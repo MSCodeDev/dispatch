@@ -290,7 +290,7 @@ Developer launchers (Node.js + npm required):
 
 - `.\dispatch-dev.ps1 <command>` (Windows PowerShell)
 - `./dispatch-dev.sh <command>` (Bash)
-- Commands: `setup`, `dev`, `start`, `build`, `update`, `seed`, `studio`, `test`, `lint`, `version`, `help`
+- Commands: `setup`, `dev`, `start`, `build`, `update`, `seed`, `studio`, `test`, `lint`, `resetdb`, `version`, `help`
 
 Example:
 
@@ -298,6 +298,7 @@ Example:
 .\dispatch.ps1 help
 .\dispatch.ps1 setup
 .\dispatch.ps1 start
+.\dispatch-dev.ps1 resetdb
 .\dispatch-dev.ps1 dev
 ```
 
@@ -305,6 +306,7 @@ Example:
 ./dispatch.sh help
 ./dispatch.sh setup
 ./dispatch.sh start
+./dispatch-dev.sh resetdb
 ./dispatch-dev.sh dev
 ```
 
