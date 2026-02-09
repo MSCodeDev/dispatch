@@ -214,4 +214,4 @@ Add a secure admin control plane with explicit role management and optional data
 - [ ] **13.3** Add administrator user-management actions: reset password, freeze/unfreeze account access, create and delete user accounts.
 - [ ] **13.4** Add administrator role delegation so an existing admin can promote or demote other user accounts to/from administrator status.
 - [ ] **13.5** Add optional support for encrypting the SQLite database at rest.
-- [ ] **13.6** Add an administrator-controlled setting to enable or disable at-rest database encryption, defaulted to **off**.
+- [ ] **13.6** Add an administrator-controlled setting to enable or disable at-rest database encryption, defaulted to **off**. Bump the version to v0.2.0
