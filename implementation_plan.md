@@ -195,7 +195,7 @@ Address cross-page UX inconsistencies, strengthen Dispatch as a daily workflow/j
 - [ ] **12.1** Ensure GitHub OAuth sign-in uses the same login transition animation sequence currently used for local credentials sign-in.
 - [ ] **12.2** Fix Project creation modal positioning bug where the popup drifts lower as project count increases.
 - [ ] **12.3** Fix Task creation modal positioning bug on the Tasks page where, when multiple tasks exist, the popup appears at the very top without expected margin.
-- [ ] **12.4** Rearrange the Dashboard "Recent Activity" section layout on the Dashboard page for clearer hierarchy and spacing.
+- [ ] **12.4** Rearrange the Dashboard "Recent Activity" section layout on the Dashboard page for clearer hierarchy and spacing. Bump the version to v0.1.1
 - [ ] **12.5** Persist and honor the Projects subsection collapsed state even when the full sidebar is collapsed and expanded again.
 - [ ] **12.6** Add a new **Insights** section (name candidate replacing "History") with completion trend visualizations over time (e.g., line/bar charts, selectable ranges).
 - [ ] **12.7** Update Dispatch page verbaige to explicitly position Daily Summary as examples such as a planning note or personal journal (including gratitude/reflection use).
