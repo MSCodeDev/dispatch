@@ -5,7 +5,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db, sqlite } from "@/db";
 import { users, accounts, sessions } from "@/db/schema";
 import { ensureDbEncryptionForRuntime } from "@/lib/db-encryption";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 type UserRole = "member" | "admin";
@@ -119,20 +119,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       ensureAuthDatabaseReady();
-      // Block sign-in if the user record wasn't created (shouldn't happen, but guard)
-      if (!user?.id) return false;
-      const [dbUser] = await db
-        .select({ id: users.id, role: users.role, frozenAt: users.frozenAt })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1);
+      const isCredentialsSignIn = account?.provider === "credentials";
 
-      if (!dbUser || dbUser.frozenAt) return false;
+      if (isCredentialsSignIn && !user?.id) return false;
 
-      // First account bootstrap: first account in the instance becomes admin.
-      const [{ userCount }] = await db.select({ userCount: sql<number>`count(*)` }).from(users);
-      if ((userCount ?? 0) === 1 && dbUser.role !== "admin") {
-        await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
+      const [dbUser] = user?.id
+        ? await db
+            .select({ id: users.id, role: users.role, frozenAt: users.frozenAt })
+            .from(users)
+            .where(eq(users.id, user.id))
+            .limit(1)
+        : [];
+
+      if (isCredentialsSignIn && !dbUser) return false;
+      if (dbUser?.frozenAt) return false;
+
+      if (dbUser) {
+        // Fallback bootstrap: promote the first account to admin if needed.
+        const [{ userCount }] = await db.select({ userCount: sql<number>`count(*)` }).from(users);
+        if ((userCount ?? 0) === 1 && dbUser.role !== "admin") {
+          await db.update(users).set({ role: "admin" }).where(eq(users.id, dbUser.id));
+        }
       }
 
       // For OAuth providers, check if this provider account is already linked to a different user.
@@ -141,7 +148,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const existing = await db
           .select()
           .from(accounts)
-          .where(eq(accounts.providerAccountId, account.providerAccountId))
+          .where(
+            and(
+              eq(accounts.provider, account.provider),
+              eq(accounts.providerAccountId, account.providerAccountId),
+            ),
+          )
           .limit(1);
         if (existing.length > 0 && existing[0].userId !== user.id) {
           // This GitHub account is already linked to another user — reject
@@ -188,6 +200,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
       }
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      ensureAuthDatabaseReady();
+      if (!user?.id) return;
+
+      // Ensure first ever user is admin on initial OAuth sign-in.
+      const [{ userCount }] = await db.select({ userCount: sql<number>`count(*)` }).from(users);
+      if ((userCount ?? 0) === 1) {
+        await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
+      }
     },
   },
   pages: {
