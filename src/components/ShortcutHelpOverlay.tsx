@@ -16,6 +16,7 @@ const SHORTCUTS = [
   { keys: ["g", "i"], description: "Go to Insights" },
   { keys: ["g", "t"], description: "Go to Tasks" },
   { keys: ["g", "n"], description: "Go to Notes" },
+  { keys: ["g", "c"], description: "Go to Calendar" },
   { keys: ["n", "t"], description: "New task" },
   { keys: ["n", "n"], description: "New note" },
   { keys: ["?"], description: "Show shortcuts" },
