@@ -96,6 +96,10 @@ export function KeyboardShortcuts({
             e.preventDefault();
             router.push("/");
             return;
+          case "c":
+            e.preventDefault();
+            router.push("/calendar");
+            return;
         }
       }
 

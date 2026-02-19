@@ -14,8 +14,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const refreshAttemptedRef = useRef(false);
   const initialRouteRef = useRef(true);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     refreshAttemptedRef.current = false;
@@ -45,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className={`flex h-screen ${isMobile ? "flex-col" : ""}`}>
       <div
         className={`pointer-events-none fixed left-0 top-0 z-[120] h-0.5 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-500 transition-all duration-500 ${
           routeLoading ? "w-full opacity-100" : "w-0 opacity-0"
@@ -61,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onShortcutHelp={() => setShortcutHelpOpen(true)}
         />
       </Suspense>
-      <main className="app-main-scrollbar flex-1 overflow-y-auto bg-neutral-50 dark:bg-neutral-950">
+      <main className={`app-main-scrollbar flex-1 overflow-y-auto bg-neutral-50 dark:bg-neutral-950 ${isMobile ? "pb-16" : ""}`}>
         {children}
       </main>
       {searchOpen && (
