@@ -9,7 +9,9 @@ import type {
   TdHTMLAttributes,
 } from "react";
 import { useRouter } from "next/navigation";
-import Markdown from "react-markdown";
+import dynamic from "next/dynamic";
+
+const MdeEditor = dynamic(() => import("@/components/MdeEditor"), { ssr: false });
 import { api, type Note } from "@/lib/client";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -189,7 +191,6 @@ export function NoteEditor({ noteId }: { noteId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"preview" | "edit">("preview");
   const [notFound, setNotFound] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -374,8 +375,6 @@ export function NoteEditor({ noteId }: { noteId: string }) {
     );
   }
 
-  const isPreview = mode === "preview";
-
   return (
     <div className="mx-auto max-w-6xl p-6 space-y-6">
       <div className="relative overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900/90 shadow-sm">
@@ -403,33 +402,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                   </span>
                 )}
               </div>
-              <div className="inline-flex rounded-lg border border-neutral-200 dark:border-neutral-700 p-1 bg-white/70 dark:bg-neutral-900/70">
-                <button
-                  onClick={() => {
-                    setMode("preview");
-                  }}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                    isPreview
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  Preview
-                </button>
-                <button
-                  onClick={() => {
-                    setMode("edit");
-                    setTimeout(() => titleRef.current?.focus(), 0);
-                  }}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                    !isPreview
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  Edit
-                </button>
-              </div>
+
               <button
                 onClick={handleCopy}
                 disabled={copying}
@@ -476,20 +449,14 @@ export function NoteEditor({ noteId }: { noteId: string }) {
               <IconDocument className="w-6 h-6" />
             </div>
             <div className="min-w-0">
-              {isPreview ? (
-                <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white truncate">
-                  {title || "Untitled Note"}
-                </h1>
-              ) : (
-                <input
-                  ref={titleRef}
-                  type="text"
-                  value={title}
-                  onChange={(e) => handleChange(e.target.value, content)}
-                  placeholder="Note title..."
-                  className="w-full text-2xl font-semibold border-none outline-none bg-transparent dark:text-white placeholder:text-neutral-400"
-                />
-              )}
+              <input
+                ref={titleRef}
+                type="text"
+                value={title}
+                onChange={(e) => handleChange(e.target.value, content)}
+                placeholder="Note title..."
+                className="w-full text-2xl font-semibold border-none outline-none bg-transparent dark:text-white placeholder:text-neutral-400"
+              />
               <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-neutral-500 dark:text-neutral-400">
                 <span className="inline-flex items-center gap-1.5">
                   <IconCalendar className="w-3.5 h-3.5" />
@@ -511,45 +478,13 @@ export function NoteEditor({ noteId }: { noteId: string }) {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-4">
-          {isPreview ? (
-            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 min-h-[420px] animate-fade-in-up shadow-sm text-neutral-700 dark:text-neutral-100">
-              {content ? (
-                <Markdown components={markdownComponents}>{content}</Markdown>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[360px] text-center">
-                  <IconDocument className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mb-3" />
-                  <p className="text-neutral-500 dark:text-neutral-400 font-medium">
-                    Nothing here yet
-                  </p>
-                  <p className="text-sm text-neutral-400 dark:text-neutral-500 mt-1">
-                    Start writing to see your note come alive.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setMode("edit");
-                      setTimeout(() => titleRef.current?.focus(), 0);
-                    }}
-                    className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5"
-                  >
-                    <IconPencil className="w-4 h-4" />
-                    Start Writing
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <textarea
-                value={content}
-                onChange={(e) => handleChange(title, e.target.value)}
-                placeholder="Write your note in markdown..."
-                className="w-full rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 text-sm font-mono dark:text-neutral-200 min-h-[420px] resize-y focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors shadow-sm"
-              />
-              <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 px-4 py-3 text-xs text-neutral-500 dark:text-neutral-400">
-                Markdown supported. Use `#` for headings, `-` for lists, and triple backticks for code blocks.
-              </div>
-            </div>
-          )}
+          <div className="tiptap-note-wrapper-outer">
+            <MdeEditor
+              key={noteId}
+              value={content}
+              onChange={(value) => handleChange(title, value)}
+            />
+          </div>
         </div>
 
         <aside className="space-y-4">
@@ -581,10 +516,7 @@ export function NoteEditor({ noteId }: { noteId: string }) {
                 <span className="text-neutral-400 dark:text-neutral-500">Updated</span>
                 <span>{updatedAt ? updatedAt.toLocaleDateString() : "—"}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-neutral-400 dark:text-neutral-500">Mode</span>
-                <span>{isPreview ? "Preview" : "Edit"}</span>
-              </div>
+
             </div>
           </div>
         </aside>
