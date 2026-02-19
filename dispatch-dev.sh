@@ -303,7 +303,7 @@ cmd_publish() {
         target_image="$(get_env_file_value "DISPATCH_IMAGE" || true)"
     fi
     if [ -z "$target_image" ]; then
-        target_image="ghcr.io/nkasco/dispatchtodoapp:latest"
+        target_image="ghcr.io/mscodedev/dispatch:latest"
     fi
 
     echo -e "  [1/3] ${CYAN}Building image (${source_image}) with docker-compose.dev.yml...${RESET}"
