@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import dynamic from "next/dynamic";
 import {
   api,
   type Task,
@@ -12,14 +13,18 @@ import {
 import { PROJECT_COLORS } from "@/lib/projects";
 import { CustomSelect } from "@/components/CustomSelect";
 
+const MdeEditor = dynamic(() => import("@/components/MdeEditor"), { ssr: false });
+
 export function TaskModal({
   task,
   defaultProjectId,
+  defaultDueDate,
   onClose,
   onSaved,
 }: {
   task: Task | null;
   defaultProjectId?: string;
+  defaultDueDate?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -31,7 +36,7 @@ export function TaskModal({
   const [priority, setPriority] = useState<TaskPriority>(
     task?.priority ?? "medium",
   );
-  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? defaultDueDate ?? "");
   const [projectId, setProjectId] = useState(
     task?.projectId ?? defaultProjectId ?? "",
   );
@@ -157,11 +162,10 @@ export function TaskModal({
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
             Description
           </label>
-          <textarea
+          <MdeEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none resize-none transition-colors"
+            onChange={setDescription}
+            compact
           />
         </div>
 
