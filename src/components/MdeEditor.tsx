@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
+import {
+  IconBold, IconItalic, IconStrikethrough, IconInlineCode,
+  IconH1, IconH2, IconH3,
+  IconBulletList, IconOrderedList, IconTaskListCheck, IconCodeBlock,
+} from "@/components/icons";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
@@ -15,7 +20,7 @@ interface MdeEditorProps {
 }
 
 type ToolbarBtn = {
-  label: string;
+  label: ReactNode;
   title: string;
   action: () => void;
   isActive?: boolean;
@@ -64,34 +69,34 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
   const toolbarGroups: ToolbarBtn[][] = compact
     ? [
         [
-          { label: "B",      title: "Bold",         action: () => editor.chain().focus().toggleBold().run(),                    isActive: editor.isActive("bold") },
-          { label: "I",      title: "Italic",        action: () => editor.chain().focus().toggleItalic().run(),                  isActive: editor.isActive("italic") },
-          { label: "S",      title: "Strikethrough", action: () => editor.chain().focus().toggleStrike().run(),                  isActive: editor.isActive("strike") },
+          { label: <IconBold />,           title: "Bold",         action: () => editor.chain().focus().toggleBold().run(),                  isActive: editor.isActive("bold") },
+          { label: <IconItalic />,         title: "Italic",       action: () => editor.chain().focus().toggleItalic().run(),                isActive: editor.isActive("italic") },
+          { label: <IconStrikethrough />,  title: "Strikethrough", action: () => editor.chain().focus().toggleStrike().run(),               isActive: editor.isActive("strike") },
         ],
         [
-          { label: "\u2022", title: "Bullet list",   action: () => editor.chain().focus().toggleBulletList().run(),              isActive: editor.isActive("bulletList") },
-          { label: "1.",     title: "Ordered list",  action: () => editor.chain().focus().toggleOrderedList().run(),             isActive: editor.isActive("orderedList") },
-          { label: "\u2610", title: "Checklist",     action: () => editor.chain().focus().toggleTaskList().run(),                isActive: editor.isActive("taskList") },
-          { label: "</>",    title: "Code block",    action: () => editor.chain().focus().toggleCodeBlock().run(),               isActive: editor.isActive("codeBlock") },
+          { label: <IconBulletList />,     title: "Bullet list",  action: () => editor.chain().focus().toggleBulletList().run(),            isActive: editor.isActive("bulletList") },
+          { label: <IconOrderedList />,    title: "Ordered list", action: () => editor.chain().focus().toggleOrderedList().run(),           isActive: editor.isActive("orderedList") },
+          { label: <IconTaskListCheck />,  title: "Checklist",    action: () => editor.chain().focus().toggleTaskList().run(),               isActive: editor.isActive("taskList") },
+          { label: <IconCodeBlock />,      title: "Code block",   action: () => editor.chain().focus().toggleCodeBlock().run(),             isActive: editor.isActive("codeBlock") },
         ],
       ]
     : [
         [
-          { label: "B",      title: "Bold",          action: () => editor.chain().focus().toggleBold().run(),                    isActive: editor.isActive("bold") },
-          { label: "I",      title: "Italic",         action: () => editor.chain().focus().toggleItalic().run(),                  isActive: editor.isActive("italic") },
-          { label: "S",      title: "Strikethrough",  action: () => editor.chain().focus().toggleStrike().run(),                  isActive: editor.isActive("strike") },
-          { label: "`",      title: "Inline code",    action: () => editor.chain().focus().toggleCode().run(),                    isActive: editor.isActive("code") },
+          { label: <IconBold />,           title: "Bold",          action: () => editor.chain().focus().toggleBold().run(),                 isActive: editor.isActive("bold") },
+          { label: <IconItalic />,         title: "Italic",        action: () => editor.chain().focus().toggleItalic().run(),               isActive: editor.isActive("italic") },
+          { label: <IconStrikethrough />,  title: "Strikethrough", action: () => editor.chain().focus().toggleStrike().run(),               isActive: editor.isActive("strike") },
+          { label: <IconInlineCode />,     title: "Inline code",   action: () => editor.chain().focus().toggleCode().run(),                 isActive: editor.isActive("code") },
         ],
         [
-          { label: "H1",     title: "Heading 1",      action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),    isActive: editor.isActive("heading", { level: 1 }) },
-          { label: "H2",     title: "Heading 2",      action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),    isActive: editor.isActive("heading", { level: 2 }) },
-          { label: "H3",     title: "Heading 3",      action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),    isActive: editor.isActive("heading", { level: 3 }) },
+          { label: <IconH1 />,             title: "Heading 1",     action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(), isActive: editor.isActive("heading", { level: 1 }) },
+          { label: <IconH2 />,             title: "Heading 2",     action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(), isActive: editor.isActive("heading", { level: 2 }) },
+          { label: <IconH3 />,             title: "Heading 3",     action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(), isActive: editor.isActive("heading", { level: 3 }) },
         ],
         [
-          { label: "\u2022", title: "Bullet list",    action: () => editor.chain().focus().toggleBulletList().run(),              isActive: editor.isActive("bulletList") },
-          { label: "1.",     title: "Ordered list",   action: () => editor.chain().focus().toggleOrderedList().run(),             isActive: editor.isActive("orderedList") },
-          { label: "\u2610", title: "Checklist",      action: () => editor.chain().focus().toggleTaskList().run(),                isActive: editor.isActive("taskList") },
-          { label: "</>",    title: "Code block",     action: () => editor.chain().focus().toggleCodeBlock().run(),               isActive: editor.isActive("codeBlock") },
+          { label: <IconBulletList />,     title: "Bullet list",   action: () => editor.chain().focus().toggleBulletList().run(),           isActive: editor.isActive("bulletList") },
+          { label: <IconOrderedList />,    title: "Ordered list",  action: () => editor.chain().focus().toggleOrderedList().run(),          isActive: editor.isActive("orderedList") },
+          { label: <IconTaskListCheck />,  title: "Checklist",     action: () => editor.chain().focus().toggleTaskList().run(),              isActive: editor.isActive("taskList") },
+          { label: <IconCodeBlock />,      title: "Code block",    action: () => editor.chain().focus().toggleCodeBlock().run(),            isActive: editor.isActive("codeBlock") },
         ],
       ];
 
