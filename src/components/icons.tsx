@@ -229,3 +229,103 @@ export function IconSparkles({ className = "w-5 h-5" }: { className?: string }) 
     </svg>
   );
 }
+
+// ── Markdown editor toolbar icons ────────────────────────────────────────────
+
+export function IconBold({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <text x="12" y="17.5" textAnchor="middle" fontSize="16" fontWeight="900" fontFamily="serif">B</text>
+    </svg>
+  );
+}
+
+export function IconItalic({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <text x="12" y="17.5" textAnchor="middle" fontSize="16" fontStyle="italic" fontWeight="600" fontFamily="serif">I</text>
+    </svg>
+  );
+}
+
+export function IconStrikethrough({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={0}>
+      <text x="12" y="17.5" textAnchor="middle" fontSize="16" fontWeight="600" fontFamily="serif">S</text>
+      <line x1="4.5" y1="12" x2="19.5" y2="12" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconInlineCode({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5 4.5 12l3.75 4.5M15.75 7.5 19.5 12l-3.75 4.5" />
+    </svg>
+  );
+}
+
+export function IconH1({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <text x="2" y="17.5" fontSize="14" fontWeight="700" fontFamily="sans-serif">H</text>
+      <text x="14" y="17.5" fontSize="11" fontWeight="700" fontFamily="sans-serif">1</text>
+    </svg>
+  );
+}
+
+export function IconH2({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <text x="2" y="17.5" fontSize="14" fontWeight="700" fontFamily="sans-serif">H</text>
+      <text x="14" y="17.5" fontSize="11" fontWeight="700" fontFamily="sans-serif">2</text>
+    </svg>
+  );
+}
+
+export function IconH3({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <text x="2" y="17.5" fontSize="14" fontWeight="700" fontFamily="sans-serif">H</text>
+      <text x="14" y="17.5" fontSize="11" fontWeight="700" fontFamily="sans-serif">3</text>
+    </svg>
+  );
+}
+
+export function IconBulletList({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M4.5 6.75h.008M4.5 12h.008M4.5 17.25h.008" />
+    </svg>
+  );
+}
+
+export function IconOrderedList({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} fill="none" d="M9 6.75h12M9 12h12M9 17.25h12" />
+      <text x="2.5" y="8.5" fontSize="6" fontWeight="700" fontFamily="sans-serif" stroke="none">1.</text>
+      <text x="2.5" y="13.75" fontSize="6" fontWeight="700" fontFamily="sans-serif" stroke="none">2.</text>
+      <text x="2.5" y="19" fontSize="6" fontWeight="700" fontFamily="sans-serif" stroke="none">3.</text>
+    </svg>
+  );
+}
+
+export function IconTaskListCheck({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <rect x="4.5" y="4.5" width="6" height="6" rx="0.75" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m5.625 7.5 1.5 1.5 2.25-2.25" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 7.5h6M13.5 12h6M4.5 16.5h15" />
+      <rect x="4.5" y="13.5" width="6" height="6" rx="0.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconCodeBlock({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" />
+    </svg>
+  );
+}

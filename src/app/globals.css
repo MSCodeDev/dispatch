@@ -672,7 +672,10 @@ html.theme-transitioning * {
 
 .tiptap-editor-content ul[data-type="taskList"] li>label {
   flex-shrink: 0;
-  margin-top: 0.2rem;
+  display: flex;
+  align-items: center;
+  height: calc(1em * 1.75);
+  /* match the line-height of the first line */
   cursor: pointer;
 }
 
@@ -686,6 +689,12 @@ html.theme-transitioning * {
 .tiptap-editor-content ul[data-type="taskList"] li>div {
   flex: 1;
   min-width: 0;
+}
+
+/* Remove paragraph margin inside task items so it doesn't offset the first line */
+.tiptap-editor-content ul[data-type="taskList"] li>div>p {
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .tiptap-editor-content ul[data-type="taskList"] li[data-checked="true"]>div>p {
