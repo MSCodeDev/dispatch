@@ -2,7 +2,7 @@ import { withAuth, jsonResponse, errorResponse } from "@/lib/api";
 import { parsePagination, paginatedResponse } from "@/lib/pagination";
 import { db } from "@/db";
 import { notes } from "@/db/schema";
-import { eq, and, like, sql, isNull } from "drizzle-orm";
+import { eq, and, like, sql, isNull, desc } from "drizzle-orm";
 
 /** GET /api/notes — list notes for the current user */
 export const GET = withAuth(async (req, session) => {
@@ -29,7 +29,7 @@ export const GET = withAuth(async (req, session) => {
       .select()
       .from(notes)
       .where(where)
-      .orderBy(notes.createdAt)
+      .orderBy(desc(notes.updatedAt))
       .limit(pagination.limit)
       .offset((pagination.page - 1) * pagination.limit);
 
@@ -40,7 +40,7 @@ export const GET = withAuth(async (req, session) => {
     .select()
     .from(notes)
     .where(where)
-    .orderBy(notes.createdAt);
+    .orderBy(desc(notes.updatedAt));
 
   return jsonResponse(results);
 });
