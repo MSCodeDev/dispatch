@@ -329,3 +329,12 @@ export function IconCodeBlock({ className = "w-5 h-5" }: { className?: string })
     </svg>
   );
 }
+
+export function IconTable({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5M9 3.75v16.5M3.75 14.25h16.5" />
+    </svg>
+  );
+}

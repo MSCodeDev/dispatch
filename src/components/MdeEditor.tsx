@@ -1,16 +1,20 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import {
   IconBold, IconItalic, IconStrikethrough, IconInlineCode,
   IconH1, IconH2, IconH3,
-  IconBulletList, IconOrderedList, IconTaskListCheck, IconCodeBlock,
+  IconBulletList, IconOrderedList, IconTaskListCheck, IconCodeBlock, IconTable,
 } from "@/components/icons";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
 import { Markdown } from "tiptap-markdown";
 
 interface MdeEditorProps {
@@ -28,6 +32,7 @@ type ToolbarBtn = {
 
 export default function MdeEditor({ value, onChange, compact = false }: MdeEditorProps) {
   const lastExternalValue = useRef(value);
+  const [isInTable, setIsInTable] = useState(false);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -35,6 +40,10 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
       StarterKit,
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Placeholder.configure({ placeholder: "Write your note in markdown..." }),
       Markdown.configure({ html: false, transformPastedText: true }),
     ],
@@ -45,11 +54,13 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
         spellcheck: "true",
       },
     },
+    onSelectionUpdate: ({ editor }) => setIsInTable(editor.isActive("table")),
     onUpdate: ({ editor }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const md = (editor.storage as any).markdown.getMarkdown() as string;
       lastExternalValue.current = md;
       onChange(md);
+      setIsInTable(editor.isActive("table"));
     },
   });
 
@@ -78,6 +89,7 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
           { label: <IconOrderedList />,    title: "Ordered list", action: () => editor.chain().focus().toggleOrderedList().run(),           isActive: editor.isActive("orderedList") },
           { label: <IconTaskListCheck />,  title: "Checklist",    action: () => editor.chain().focus().toggleTaskList().run(),               isActive: editor.isActive("taskList") },
           { label: <IconCodeBlock />,      title: "Code block",   action: () => editor.chain().focus().toggleCodeBlock().run(),             isActive: editor.isActive("codeBlock") },
+          { label: <IconTable />,          title: "Table",        action: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), isActive: editor.isActive("table") },
         ],
       ]
     : [
@@ -97,6 +109,7 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
           { label: <IconOrderedList />,    title: "Ordered list",  action: () => editor.chain().focus().toggleOrderedList().run(),          isActive: editor.isActive("orderedList") },
           { label: <IconTaskListCheck />,  title: "Checklist",     action: () => editor.chain().focus().toggleTaskList().run(),              isActive: editor.isActive("taskList") },
           { label: <IconCodeBlock />,      title: "Code block",    action: () => editor.chain().focus().toggleCodeBlock().run(),            isActive: editor.isActive("codeBlock") },
+          { label: <IconTable />,          title: "Table",         action: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), isActive: editor.isActive("table") },
         ],
       ];
 
@@ -119,6 +132,25 @@ export default function MdeEditor({ value, onChange, compact = false }: MdeEdito
           </div>
         ))}
       </div>
+      {isInTable && editor && (
+        <div className="table-context-toolbar">
+          <div className="table-bubble-section">
+            <span className="table-bubble-label">Row</span>
+            <button type="button" title="Add row before" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowBefore().run(); }}>↑ Add</button>
+            <button type="button" title="Add row after"  onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowAfter().run(); }}>↓ Add</button>
+            <button type="button" title="Delete row"     onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteRow().run(); }} className="table-bubble-delete">Delete</button>
+          </div>
+          <div className="table-bubble-sep" />
+          <div className="table-bubble-section">
+            <span className="table-bubble-label">Col</span>
+            <button type="button" title="Add column before" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnBefore().run(); }}>← Add</button>
+            <button type="button" title="Add column after"  onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnAfter().run(); }}>→ Add</button>
+            <button type="button" title="Delete column"     onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteColumn().run(); }} className="table-bubble-delete">Delete</button>
+          </div>
+          <div className="table-bubble-sep" />
+          <button type="button" title="Delete table" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteTable().run(); }} className="table-bubble-delete table-bubble-delete--table">✕ Delete table</button>
+        </div>
+      )}
       <EditorContent editor={editor} />
     </div>
   );
