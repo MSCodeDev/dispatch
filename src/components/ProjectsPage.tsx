@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, type ProjectWithStats, type Task, type TaskStatus } from "@/lib/client";
 import { ProjectModal } from "@/components/ProjectModal";
 import { TaskModal } from "@/components/TaskModal";
 import { useToast } from "@/components/ToastProvider";
+
+const MdeEditor = dynamic(() => import("@/components/MdeEditor"), { ssr: false });
 import {
   IconPlus,
   IconPencil,
@@ -53,14 +56,19 @@ export function ProjectsPage() {
   const [showCompletedProjects, setShowCompletedProjects] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectWithStats | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [completingTaskIds, setCompletingTaskIds] = useState<string[]>([]);
   const completionTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
+  const [descriptionSaved, setDescriptionSaved] = useState(false);
+  const descSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descSavedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedId = searchParams.get("projectId") || "";
+
   const selectedProject = useMemo(
     () => projects.find((p) => p.id === selectedId) ?? null,
     [projects, selectedId],
@@ -72,6 +80,13 @@ export function ProjectsPage() {
         : projects.filter((project) => project.status !== "completed"),
     [projects, showCompletedProjects],
   );
+
+  // Sync description draft when selected project changes
+  useEffect(() => {
+    setDescriptionDraft(selectedProject?.description ?? "");
+    setDescriptionSaved(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProject?.id]);
   const visibleTasks = useMemo(
     () => (
       showCompleted
@@ -142,20 +157,6 @@ export function ProjectsPage() {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (!deletingId) return;
-    function handleCancel(event: MouseEvent) {
-      const target = event.target as Element | null;
-      const deleteButton = target?.closest("[data-project-delete]");
-      if (deleteButton?.getAttribute("data-project-delete") === deletingId) {
-        return;
-      }
-      setDeletingId(null);
-    }
-    document.addEventListener("mousedown", handleCancel);
-    return () => document.removeEventListener("mousedown", handleCancel);
-  }, [deletingId]);
-
-  useEffect(() => {
     if (!deletingTaskId) return;
     function handleCancel(event: MouseEvent) {
       const target = event.target as Element | null;
@@ -203,23 +204,19 @@ export function ProjectsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (deletingId === id) {
-      try {
-        await api.projects.delete(id);
-        toast.success("Project deleted");
-        setDeletingId(null);
-        await refreshProjects();
-        window.dispatchEvent(new CustomEvent("projects:refresh"));
-        if (selectedId === id) {
-          router.replace("/projects", { scroll: false });
-        }
-      } catch {
-        toast.error("Failed to delete project");
+    try {
+      await api.projects.delete(id);
+      toast.success("Project deleted");
+      setModalOpen(false);
+      setEditingProject(null);
+      await refreshProjects();
+      window.dispatchEvent(new CustomEvent("projects:refresh"));
+      if (selectedId === id) {
+        router.replace("/projects", { scroll: false });
       }
-      return;
+    } catch {
+      toast.error("Failed to delete project");
     }
-    setDeletingId(id);
-    setTimeout(() => setDeletingId(null), 2500);
   }
 
   function handleSaved() {
@@ -228,6 +225,35 @@ export function ProjectsPage() {
     refreshProjects();
     toast.success("Project saved");
     window.dispatchEvent(new CustomEvent("projects:refresh"));
+  }
+
+  async function saveDescription(id: string, value: string) {
+    setDescriptionSaving(true);
+    try {
+      await api.projects.update(id, { description: value || undefined });
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, description: value || null } : p)),
+      );
+      window.dispatchEvent(new CustomEvent("projects:refresh"));
+      setDescriptionSaved(true);
+      if (descSavedTimeout.current) clearTimeout(descSavedTimeout.current);
+      descSavedTimeout.current = setTimeout(() => setDescriptionSaved(false), 2000);
+    } catch {
+      toast.error("Failed to save description");
+    } finally {
+      setDescriptionSaving(false);
+    }
+  }
+
+  function handleDescriptionChange(value: string) {
+    setDescriptionDraft(value);
+    setDescriptionSaved(false);
+    if (descSaveTimeout.current) clearTimeout(descSaveTimeout.current);
+    if (!selectedProject) return;
+    const id = selectedProject.id;
+    descSaveTimeout.current = setTimeout(() => {
+      saveDescription(id, value);
+    }, 800);
   }
 
   async function handleTaskStatusToggle(task: Task) {
@@ -404,41 +430,26 @@ export function ProjectsPage() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-2.5 w-2.5 rounded-full ${PROJECT_COLORS[selectedProject.color]?.dot ?? "bg-blue-500"}`} />
+                  <div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PROJECT_COLORS[selectedProject.color]?.dot ?? "bg-blue-500"}`} />
                         <h2 className="text-xl font-semibold dark:text-white truncate">
                           {selectedProject.name}
                         </h2>
                       </div>
-                      <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                        {selectedProject.description || "No description added yet."}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingProject(selectedProject);
-                          setModalOpen(true);
-                        }}
-                        className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95 inline-flex items-center gap-1.5"
-                      >
-                        <IconPencil className="w-3.5 h-3.5" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(selectedProject.id)}
-                        data-project-delete={selectedProject.id}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all active:scale-95 inline-flex items-center gap-1.5 ${
-                          deletingId === selectedProject.id
-                            ? "bg-red-600 text-white hover:bg-red-500"
-                            : "border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-600"
-                        }`}
-                      >
-                        <IconTrash className="w-3.5 h-3.5" />
-                        {deletingId === selectedProject.id ? "Confirm" : "Delete"}
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => {
+                            setEditingProject(selectedProject);
+                            setModalOpen(true);
+                          }}
+                          className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95 inline-flex items-center gap-1.5"
+                        >
+                          <IconPencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -448,28 +459,18 @@ export function ProjectsPage() {
                     <StatPill label="Done" value={selectedProject.stats.done} color="green" />
                   </div>
 
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-                      Quick Actions
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingTask(null);
-                          setTaskModalOpen(true);
-                        }}
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-500 active:scale-95 transition-all inline-flex items-center gap-1.5"
-                      >
-                        <IconPlus className="w-3.5 h-3.5" />
-                        New Task
-                      </button>
-                      <button
-                        onClick={() => router.push(`/tasks?projectId=${selectedProject.id}`)}
-                        className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
-                      >
-                        View Tasks
-                      </button>
-                    </div>
+                  <div className="relative">
+                    {(descriptionSaving || descriptionSaved) && (
+                      <span className="absolute top-2 right-2 z-10 text-xs text-neutral-400 dark:text-neutral-500 pointer-events-none">
+                        {descriptionSaving ? "Saving…" : "Saved"}
+                      </span>
+                    )}
+                    <MdeEditor
+                      key={selectedProject.id}
+                      compact
+                      value={descriptionDraft}
+                      onChange={handleDescriptionChange}
+                    />
                   </div>
 
                   <div>
@@ -692,6 +693,7 @@ export function ProjectsPage() {
             setEditingProject(null);
           }}
           onSaved={handleSaved}
+          onDelete={editingProject ? () => handleDelete(editingProject.id) : undefined}
         />
       )}
 
@@ -704,6 +706,15 @@ export function ProjectsPage() {
             setEditingTask(null);
           }}
           onSaved={handleTaskSaved}
+          onDeleted={async () => {
+            if (editingTask) {
+              setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+            }
+            setTaskModalOpen(false);
+            setEditingTask(null);
+            toast.success("Task deleted");
+            await refreshProjects();
+          }}
         />
       )}
     </div>
