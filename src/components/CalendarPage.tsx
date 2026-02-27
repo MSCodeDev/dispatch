@@ -23,19 +23,6 @@ function formatDateStr(year: number, month: number, day: number) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function statusDotColor(status: string) {
-  switch (status) {
-    case "open":
-      return "bg-blue-500";
-    case "in_progress":
-      return "bg-yellow-500";
-    case "done":
-      return "bg-green-500";
-    default:
-      return "bg-neutral-400";
-  }
-}
-
 function statusLabel(status: string) {
   switch (status) {
     case "open":
@@ -59,13 +46,25 @@ export function CalendarPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 768);
+    }
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [defaultDueDate, setDefaultDueDate] = useState<string | undefined>(undefined);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [autoAdvanceTarget, setAutoAdvanceTarget] = useState<number | null>(null);
   const suppressRefreshRef = useRef(false);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchTasks = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -198,14 +197,23 @@ export function CalendarPage() {
   }, [year, month]);
 
   const todayRef = useRef<HTMLDivElement>(null);
+  const todayAgendaRef = useRef<HTMLDivElement>(null);
 
   const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long" });
   const today = todayStr();
 
-  // Scroll to today's cell after loading completes
+  // Flat list of weekdays for the agenda (mobile) view
+  const agendaDays = useMemo(
+    () => calendarDays.filter((d): d is NonNullable<typeof d> => d !== null),
+    [calendarDays],
+  );
+
+  // Scroll to today's cell/row after loading completes
   useEffect(() => {
-    if (!loading && todayRef.current) {
-      todayRef.current.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (!loading) {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+      const el = isMobile ? todayAgendaRef.current : todayRef.current;
+      el?.scrollIntoView({ block: "start", behavior: "smooth" });
     }
   }, [loading]);
 
@@ -254,6 +262,31 @@ export function CalendarPage() {
   function handleDragEnd() {
     setDraggingTaskId(null);
     setDropTarget(null);
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvanceTarget(null);
+  }
+
+  function handleNavDragEnter(offset: number) {
+    if (!draggingTaskId) return;
+    setAutoAdvanceTarget(offset);
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      navigateMonth(offset);
+      setAutoAdvanceTarget(null);
+      autoAdvanceTimerRef.current = null;
+    }, 700);
+  }
+
+  function handleNavDragLeave(e: React.DragEvent) {
+    // Only cancel if the pointer truly left the button (not just entered a child element)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvanceTarget(null);
   }
 
   function handleDragOver(e: React.DragEvent, dateStr: string) {
@@ -321,11 +354,11 @@ export function CalendarPage() {
   }, [calendarDays, tasksByDate]);
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <div className="mx-auto max-w-7xl p-4 md:p-6">
       {/* Header with month navigation */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 md:mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Calendar</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 dark:text-white">Calendar</h1>
           <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
             {totalTasksThisMonth} task{totalTasksThisMonth !== 1 ? "s" : ""} this month
             {tasksWithoutDueDate > 0 && (
@@ -336,25 +369,120 @@ export function CalendarPage() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigateMonth(-1)}
-            className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+            onDragEnter={() => handleNavDragEnter(-1)}
+            onDragLeave={handleNavDragLeave}
+            onDragOver={(e) => e.preventDefault()}
+            className={`rounded-lg p-2 active:scale-95 transition-all
+              ${autoAdvanceTarget === -1
+                ? "bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-400 dark:ring-blue-500 scale-110"
+                : "hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
             aria-label="Previous month"
           >
-            <IconChevronLeft className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
+            <IconChevronLeft className={`w-5 h-5 transition-colors pointer-events-none ${autoAdvanceTarget === -1 ? "text-blue-600 dark:text-blue-400" : "text-neutral-600 dark:text-neutral-400"}`} />
           </button>
           <h2 className="text-xl font-semibold text-neutral-900 dark:text-white min-w-[180px] text-center">
             {monthName} {year}
           </h2>
           <button
             onClick={() => navigateMonth(1)}
-            className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+            onDragEnter={() => handleNavDragEnter(1)}
+            onDragLeave={handleNavDragLeave}
+            onDragOver={(e) => e.preventDefault()}
+            className={`rounded-lg p-2 active:scale-95 transition-all
+              ${autoAdvanceTarget === 1
+                ? "bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-400 dark:ring-blue-500 scale-110"
+                : "hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}
             aria-label="Next month"
           >
-            <IconChevronLeft className="w-5 h-5 text-neutral-600 dark:text-neutral-400 rotate-180" />
+            <IconChevronLeft className={`w-5 h-5 rotate-180 transition-colors pointer-events-none ${autoAdvanceTarget === 1 ? "text-blue-600 dark:text-blue-400" : "text-neutral-600 dark:text-neutral-400"}`} />
           </button>
         </div>
       </div>
 
-      {/* Calendar grid */}
+      {/* Agenda view — mobile only */}
+      {isMobile && (
+      <div className="rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-24">
+            <span className="inline-block w-6 h-6 border-2 border-neutral-300 dark:border-neutral-600 border-t-transparent rounded-full animate-spinner" />
+          </div>
+        ) : (
+          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+            {agendaDays.map((cell) => {
+              const dayTasks = tasksByDate.get(cell.dateStr) ?? [];
+              const isToday = cell.dateStr === today;
+              const dayLabel = new Date(cell.year, cell.month - 1, cell.day).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              });
+
+              return (
+                <div
+                  key={cell.dateStr}
+                  ref={isToday ? todayAgendaRef : undefined}
+                  className={isToday ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}
+                >
+                  {/* Date header row — tap to add a task */}
+                  <button
+                    onClick={() => handleCellClick(cell.dateStr)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
+                  >
+                    <span className={`text-sm font-semibold ${
+                      isToday
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-neutral-600 dark:text-neutral-400"
+                    }`}>
+                      {dayLabel}
+                      {isToday && (
+                        <span className="ml-2 text-xs font-normal text-blue-400 dark:text-blue-500">Today</span>
+                      )}
+                    </span>
+                    <IconPlus className="w-4 h-4 text-neutral-300 dark:text-neutral-600" />
+                  </button>
+
+                  {/* Task list for this day */}
+                  {dayTasks.length > 0 && (
+                    <div className="px-4 pb-3 space-y-1.5">
+                      {dayTasks.map((task) => {
+                        const project = task.projectId ? projectMap.get(task.projectId) : null;
+                        const projectColor = project?.color
+                          ? PROJECT_COLORS[project.color as keyof typeof PROJECT_COLORS]
+                          : null;
+                        const isDone = task.status === "done";
+
+                        return (
+                          <button
+                            key={task.id}
+                            onClick={(e) => handleTaskClick(e, task)}
+                            title={`${task.title} — ${statusLabel(task.status)}`}
+                            className={`
+                              w-full text-left rounded-lg px-3 py-2.5 flex items-center gap-2.5
+                              transition-colors
+                              ${
+                                isDone
+                                  ? "opacity-50 line-through text-neutral-400 dark:text-neutral-500 bg-neutral-100 dark:bg-neutral-800/60 active:bg-neutral-200/80 dark:active:bg-neutral-700/60"
+                                  : "text-neutral-700 dark:text-neutral-200 bg-neutral-100 dark:bg-neutral-800/60 active:bg-neutral-200/80 dark:active:bg-neutral-700/60"
+                              }
+                            `}
+                          >
+                            <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${projectColor ? projectColor.dot : "bg-neutral-300 dark:bg-neutral-600"}`} title={project?.name} />
+                            <span className="flex-1 text-sm leading-snug">{task.title}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* Calendar grid — desktop only */}
+      {!isMobile && (
       <div className="rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-sm overflow-hidden">
         {/* Day headers */}
         <div className="grid grid-cols-5 border-b border-neutral-200 dark:border-neutral-800">
@@ -450,15 +578,8 @@ export function CalendarPage() {
                             }
                           `}
                         >
-                          <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${statusDotColor(task.status)}`} />
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${projectColor ? projectColor.dot : "bg-neutral-300 dark:bg-neutral-600"}`} title={project?.name} />
                           <span className="truncate">{task.title}</span>
-                          {projectColor && (
-                            <span
-                              className="inline-block w-2 h-2 rounded-full shrink-0 ml-auto"
-                              style={{ backgroundColor: projectColor.dot }}
-                              title={project?.name}
-                            />
-                          )}
                         </button>
                       );
                     })}
@@ -469,6 +590,7 @@ export function CalendarPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Task Modal */}
       {modalOpen && (
@@ -477,6 +599,15 @@ export function CalendarPage() {
           defaultDueDate={defaultDueDate}
           onClose={handleModalClose}
           onSaved={handleModalSaved}
+          onDeleted={() => {
+            setModalOpen(false);
+            setEditingTask(null);
+            setDefaultDueDate(undefined);
+            if (editingTask) {
+              setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+            }
+            toast.success("Task deleted");
+          }}
         />
       )}
     </div>

@@ -571,6 +571,14 @@ export function TasksPage() {
             setEditingTask(null);
           }}
           onSaved={handleSaved}
+          onDeleted={() => {
+            if (editingTask) {
+              setTasks((prev) => prev.filter((t) => t.id !== editingTask.id));
+            }
+            setModalOpen(false);
+            setEditingTask(null);
+            toast.success("Task deleted");
+          }}
         />
       )}
     </div>

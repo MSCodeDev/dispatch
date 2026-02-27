@@ -21,12 +21,14 @@ export function TaskModal({
   defaultDueDate,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   task: Task | null;
   defaultProjectId?: string;
   defaultDueDate?: string;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted?: () => void;
 }) {
   const isEditing = task !== null;
 
@@ -42,6 +44,8 @@ export function TaskModal({
   );
   const [projects, setProjects] = useState<Project[]>([]);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
 
@@ -60,6 +64,24 @@ export function TaskModal({
       active = false;
     };
   }, []);
+
+  async function handleDelete() {
+    if (!task) return;
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      setTimeout(() => setDeleteConfirm(false), 2500);
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.tasks.delete(task.id);
+      onDeleted ? onDeleted() : onClose();
+    } catch {
+      setError("Failed to delete task");
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -206,24 +228,42 @@ export function TaskModal({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2"
-          >
-            {saving && (
-              <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spinner" />
+        <div className="flex justify-between gap-2 pt-2">
+          <div>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className={`rounded-lg px-4 py-2 text-sm font-medium active:scale-95 transition-all disabled:opacity-50 ${
+                  deleteConfirm
+                    ? "bg-red-600 text-white hover:bg-red-500"
+                    : "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                }`}
+              >
+                {deleting ? "Deleting…" : deleteConfirm ? "Confirm delete" : "Delete"}
+              </button>
             )}
-            {saving ? "Saving..." : isEditing ? "Update" : "Create"}
-          </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-neutral-900 dark:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50 active:scale-95 transition-all inline-flex items-center gap-2"
+            >
+              {saving && (
+                <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spinner" />
+              )}
+              {saving ? "Saving..." : isEditing ? "Update" : "Create"}
+            </button>
+          </div>
         </div>
       </form>
     </div>,
