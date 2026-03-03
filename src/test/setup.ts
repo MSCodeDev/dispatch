@@ -8,8 +8,6 @@ type MockSession = {
     email: string;
     role?: "member" | "admin";
     isFrozen?: boolean;
-    showAdminQuickAccess?: boolean;
-    assistantEnabled?: boolean;
   };
 } | null;
 

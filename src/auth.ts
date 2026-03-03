@@ -1,18 +1,12 @@
 import NextAuth from "next-auth";
-import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db, sqlite } from "@/db";
+import { db } from "@/db";
 import { users, accounts, sessions } from "@/db/schema";
-import { ensureDbEncryptionForRuntime } from "@/lib/db-encryption";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
 type UserRole = "member" | "admin";
-
-function ensureAuthDatabaseReady() {
-  ensureDbEncryptionForRuntime(sqlite);
-}
 
 function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
   if (typeof code !== "string" || code !== "JWTSessionError") return false;
@@ -36,14 +30,11 @@ function isStaleJwtSecretError(code: unknown, details: unknown[]): boolean {
 
 async function getUserAccess(
   userId: string,
-): Promise<{ role: UserRole; isFrozen: boolean; showAdminQuickAccess: boolean; assistantEnabled: boolean }> {
-  ensureAuthDatabaseReady();
+): Promise<{ role: UserRole; isFrozen: boolean }> {
   const [dbUser] = await db
     .select({
       role: users.role,
       frozenAt: users.frozenAt,
-      showAdminQuickAccess: users.showAdminQuickAccess,
-      assistantEnabled: users.assistantEnabled,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -52,20 +43,10 @@ async function getUserAccess(
   return {
     role: (dbUser?.role as UserRole | undefined) ?? "member",
     isFrozen: Boolean(dbUser?.frozenAt),
-    showAdminQuickAccess: dbUser?.showAdminQuickAccess ?? true,
-    assistantEnabled: dbUser?.assistantEnabled ?? true,
   };
 }
 
-const providers = [];
-
-// Only add GitHub if credentials are configured
-if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) {
-  providers.push(GitHub);
-}
-
-// Credentials provider for local accounts
-providers.push(
+const providers = [
   Credentials({
     name: "credentials",
     credentials: {
@@ -73,7 +54,6 @@ providers.push(
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
-      ensureAuthDatabaseReady();
       const email = credentials?.email as string;
       const password = credentials?.password as string;
 
@@ -95,12 +75,10 @@ providers.push(
         image: user.image,
         role: user.role ?? "member",
         isFrozen: false,
-        showAdminQuickAccess: user.showAdminQuickAccess ?? true,
-        assistantEnabled: user.assistantEnabled ?? true,
       };
     },
-  })
-);
+  }),
+];
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -109,8 +87,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
   }),
   providers,
-  // Always use JWT — the adapter still persists users/accounts on OAuth sign-in,
-  // but JWT avoids the incompatibility between Credentials provider and database sessions.
   session: { strategy: "jwt" },
   logger: {
     error(code, ...message) {
@@ -121,7 +97,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      ensureAuthDatabaseReady();
       const isCredentialsSignIn = account?.provider === "credentials";
 
       if (isCredentialsSignIn && !user?.id) return false;
@@ -145,25 +120,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // For OAuth providers, check if this provider account is already linked to a different user.
-      // The adapter handles linking automatically, but this guards against edge cases.
-      if (account?.provider && account.provider !== "credentials") {
-        const existing = await db
-          .select()
-          .from(accounts)
-          .where(
-            and(
-              eq(accounts.provider, account.provider),
-              eq(accounts.providerAccountId, account.providerAccountId),
-            ),
-          )
-          .limit(1);
-        if (existing.length > 0 && existing[0].userId !== user.id) {
-          // This GitHub account is already linked to another user — reject
-          return false;
-        }
-      }
-
       return true;
     },
     async jwt({ token, user, account }) {
@@ -183,15 +139,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const access = await getUserAccess(token.sub);
           token.role = access.role;
           token.isFrozen = access.isFrozen;
-          token.showAdminQuickAccess = access.showAdminQuickAccess;
-          token.assistantEnabled = access.assistantEnabled;
         } catch (error) {
           // Avoid invalidating the active session during transient rekey transitions.
           console.error("Failed to refresh JWT access claims from database:", error);
           token.role = (token.role as UserRole | undefined) ?? "member";
           token.isFrozen = Boolean(token.isFrozen);
-          token.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
-          token.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
         }
       }
 
@@ -202,22 +154,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.sub;
         session.user.role = (token.role as UserRole | undefined) ?? "member";
         session.user.isFrozen = Boolean(token.isFrozen);
-        session.user.showAdminQuickAccess = (token.showAdminQuickAccess as boolean | undefined) ?? true;
-        session.user.assistantEnabled = (token.assistantEnabled as boolean | undefined) ?? true;
       }
       return session;
-    },
-  },
-  events: {
-    async createUser({ user }) {
-      ensureAuthDatabaseReady();
-      if (!user?.id) return;
-
-      // Ensure first ever user is admin on initial OAuth sign-in.
-      const [{ userCount }] = await db.select({ userCount: sql<number>`count(*)` }).from(users);
-      if ((userCount ?? 0) === 1) {
-        await db.update(users).set({ role: "admin" }).where(eq(users.id, user.id));
-      }
     },
   },
   pages: {

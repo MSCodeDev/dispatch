@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 
 interface KeyboardShortcutsProps {
   onSearchOpen: () => void;
@@ -14,7 +13,6 @@ export function KeyboardShortcuts({
   onShortcutHelp,
 }: KeyboardShortcutsProps) {
   const router = useRouter();
-  const { data: session } = useSession();
   const lastKeyRef = useRef<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,18 +52,6 @@ export function KeyboardShortcuts({
         return;
       }
 
-      // Alt+A or Ctrl+Shift+A — open Personal Assistant
-      const assistantEnabled = session?.user?.assistantEnabled ?? true;
-      if (
-        assistantEnabled &&
-        ((e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.key.toLowerCase() === "a") ||
-          (e.ctrlKey && e.shiftKey && !e.metaKey && e.key.toLowerCase() === "a"))
-      ) {
-        e.preventDefault();
-        router.push("/assistant");
-        return;
-      }
-
       // Escape — close overlays (handled by individual overlays)
 
       // Sequence-based shortcuts: g+d, g+i, g+t, g+n, g+h, n+t, n+n
@@ -79,10 +65,6 @@ export function KeyboardShortcuts({
           case "d":
             e.preventDefault();
             router.push("/dispatch");
-            return;
-          case "i":
-            e.preventDefault();
-            router.push("/insights");
             return;
           case "t":
             e.preventDefault();
@@ -132,7 +114,7 @@ export function KeyboardShortcuts({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router, onSearchOpen, onShortcutHelp, session?.user?.assistantEnabled]);
+  }, [router, onSearchOpen, onShortcutHelp]);
 
   return null;
 }

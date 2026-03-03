@@ -1,10 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { api, type AdminSecuritySettings, type AdminUser, type UserRole } from "@/lib/client";
+import { api, type AdminUser, type UserRole } from "@/lib/client";
 import { useToast } from "@/components/ToastProvider";
 import { CustomSelect } from "@/components/CustomSelect";
-import { IconChevronDown, IconKey, IconShield, IconTrash } from "@/components/icons";
+import { IconChevronDown, IconTrash } from "@/components/icons";
 
 interface AdminSettingsPanelProps {
   currentUserId: string;
@@ -20,7 +20,6 @@ type CreateUserForm = {
 export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [security, setSecurity] = useState<AdminSecuritySettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState<CreateUserForm>({
@@ -30,10 +29,7 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
     role: "member",
   });
   const [passwordResets, setPasswordResets] = useState<Record<string, string>>({});
-  const [encryptionEnabled, setEncryptionEnabled] = useState(false);
-  const [encryptionPassphrase, setEncryptionPassphrase] = useState("");
-  const [shareAiApiKeyWithUsers, setShareAiApiKeyWithUsers] = useState(false);
-  const [userManagementOpen, setUserManagementOpen] = useState(false);
+  const [userManagementOpen] = useState(true);
 
   const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
   const roleOptions = useMemo(
@@ -47,14 +43,8 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
   async function refreshAll() {
     setLoading(true);
     try {
-      const [nextUsers, nextSecurity] = await Promise.all([
-        api.admin.listUsers(),
-        api.admin.getSecurity(),
-      ]);
+      const nextUsers = await api.admin.listUsers();
       setUsers(nextUsers);
-      setSecurity(nextSecurity);
-      setEncryptionEnabled(nextSecurity.databaseEncryptionEnabled);
-      setShareAiApiKeyWithUsers(nextSecurity.shareAiApiKeyWithUsers);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to load administration data");
     } finally {
@@ -132,45 +122,6 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
     }
   }
 
-  async function handleSaveEncryption() {
-    if (encryptionEnabled && encryptionPassphrase.length < 12) {
-      toast.error("Passphrase must be at least 12 characters");
-      return;
-    }
-
-    setBusyKey("encryption");
-    try {
-      const next = await api.admin.updateSecurity({
-        enabled: encryptionEnabled,
-        passphrase: encryptionEnabled ? encryptionPassphrase : undefined,
-      });
-      setSecurity(next);
-      setEncryptionEnabled(next.databaseEncryptionEnabled);
-      setEncryptionPassphrase("");
-      toast.success("Security settings updated");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update encryption settings");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function handleSaveAiKeySharing() {
-    setBusyKey("ai-key-sharing");
-    try {
-      const next = await api.admin.updateSecurity({
-        shareAiApiKeyWithUsers,
-      });
-      setSecurity(next);
-      setShareAiApiKeyWithUsers(next.shareAiApiKeyWithUsers);
-      toast.success("AI key sharing setting updated");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update AI key sharing");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
   if (loading) {
     return (
       <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm">
@@ -183,8 +134,7 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
     <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
-            <IconShield className="w-4 h-4" />
+          <h2 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
             Administration
           </h2>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
@@ -197,66 +147,13 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
       </div>
 
       <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/40 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Create User</h3>
-        <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
-          <input
-            value={createForm.name}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
-            placeholder="Name"
-            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-          />
-          <input
-            value={createForm.email}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))}
-            placeholder="Email"
-            type="email"
-            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-          />
-          <input
-            value={createForm.password}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))}
-            placeholder="Password"
-            type="password"
-            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-          />
-          <CustomSelect
-            label="Role"
-            value={createForm.role}
-            onChange={(value) => setCreateForm((prev) => ({ ...prev, role: value as UserRole }))}
-            options={roleOptions}
-          />
-          <button
-            type="submit"
-            disabled={busyKey === "create-user"}
-            className="h-[42px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-          >
-            Create
-          </button>
-        </form>
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/40 p-4">
-        <button
-          type="button"
-          onClick={() => setUserManagementOpen((prev) => !prev)}
-          className="w-full flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-semibold text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors"
-        >
-          <span>User Management</span>
-          <IconChevronDown
-            className={`w-4 h-4 text-neutral-500 transition-transform ${
-              userManagementOpen ? "" : "-rotate-90"
-            }`}
-          />
-        </button>
+        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">User Management</h3>
         {userManagementOpen && (
           <div className="space-y-3">
           {users.map((user) => {
             const isSelf = user.id === currentUserId;
             const nextRole = user.role === "admin" ? "member" : "admin";
             const resetValue = passwordResets[user.id] ?? "";
-            const providerSet = new Set(user.providers.map((provider) => provider.toLowerCase()));
-            const hasGitHubProvider = providerSet.has("github");
-            const hasLocalCredentials = user.hasPassword;
             return (
               <div
                 key={user.id}
@@ -273,16 +170,6 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
                     <span className="rounded-full bg-neutral-200 dark:bg-neutral-800 px-2 py-1 text-neutral-700 dark:text-neutral-300">
                       {user.role === "admin" ? "Admin" : "Member"}
                     </span>
-                    {hasGitHubProvider && (
-                      <span className="rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-2 py-1">
-                        GitHub
-                      </span>
-                    )}
-                    {hasLocalCredentials && (
-                      <span className="rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-2 py-1">
-                        Local
-                      </span>
-                    )}
                     <span
                       className={`rounded-full px-2 py-1 ${
                         user.frozenAt
@@ -361,80 +248,44 @@ export function AdminSettingsPanel({ currentUserId }: AdminSettingsPanelProps) {
       </div>
 
       <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/40 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
-          <IconKey className="w-4 h-4" />
-          Personal Assistant Key Sharing
-        </h3>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          Allow Dispatch users without their own provider key to use an administrator-managed AI API key.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-            <input
-              type="checkbox"
-              checked={shareAiApiKeyWithUsers}
-              onChange={(event) => setShareAiApiKeyWithUsers(event.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700"
-            />
-            Make admin API key available to all users
-          </label>
-          <button
-            onClick={handleSaveAiKeySharing}
-            disabled={busyKey === "ai-key-sharing"}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-          >
-            Save
-          </button>
-        </div>
-        <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-          Default is off.
-        </p>
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/40 p-4">
-        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
-          <IconKey className="w-4 h-4" />
-          Data-at-Rest Protection
-        </h3>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-          Optional SQLCipher-backed encryption for the SQLite file. Default is off.
-        </p>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="rounded-full bg-neutral-200 dark:bg-neutral-800 px-2 py-1 text-neutral-700 dark:text-neutral-300">
-            SQLCipher: {security?.sqlCipherAvailable ? "available" : "not available"}
-          </span>
-          <span className="rounded-full bg-neutral-200 dark:bg-neutral-800 px-2 py-1 text-neutral-700 dark:text-neutral-300">
-            Encryption: {security?.databaseEncryptionEnabled ? "enabled" : "disabled"}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-            <input
-              type="checkbox"
-              checked={encryptionEnabled}
-              onChange={(event) => setEncryptionEnabled(event.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700"
-            />
-            Enable encryption
-          </label>
+        <h3 className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Create User</h3>
+        <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
           <input
+            value={createForm.name}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+            placeholder="Name"
+            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+          <input
+            value={createForm.email}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))}
+            placeholder="Email"
+            type="email"
+            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+          <input
+            value={createForm.password}
+            onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))}
+            placeholder="Password"
             type="password"
-            value={encryptionPassphrase}
-            onChange={(event) => setEncryptionPassphrase(event.target.value)}
-            placeholder="Encryption passphrase"
-            disabled={!encryptionEnabled}
-            className="min-w-[260px] flex-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-60"
+            className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900/80 px-3 py-2 text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+          />
+          <CustomSelect
+            label="Role"
+            value={createForm.role}
+            onChange={(value) => setCreateForm((prev) => ({ ...prev, role: value as UserRole }))}
+            options={roleOptions}
           />
           <button
-            onClick={handleSaveEncryption}
-            disabled={busyKey === "encryption"}
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+            type="submit"
+            disabled={busyKey === "create-user"}
+            className="h-[42px] rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
           >
-            Save
+            Create
           </button>
-        </div>
+        </form>
       </div>
+
     </section>
   );
 }

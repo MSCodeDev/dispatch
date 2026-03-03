@@ -1,10 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { db } from "@/db";
 import { tasks, notes, projects, dispatches, accounts, users } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { ProfilePreferences } from "@/components/ProfilePreferences";
 
 export default async function Profile() {
   const session = await auth();
@@ -37,8 +35,6 @@ export default async function Profile() {
     db
       .select({
         role: users.role,
-        showAdminQuickAccess: users.showAdminQuickAccess,
-        assistantEnabled: users.assistantEnabled,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -48,8 +44,6 @@ export default async function Profile() {
   const providers = linkedAccounts.map((a) => a.provider).filter(Boolean);
   const completionPercent = taskCount > 0 ? Math.round(((doneCount ?? 0) / taskCount) * 100) : 0;
   const isAdmin = currentUserRecord?.role === "admin";
-  const showAdminQuickAccess = currentUserRecord?.showAdminQuickAccess ?? true;
-  const assistantEnabled = currentUserRecord?.assistantEnabled ?? true;
 
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6 animate-fade-in-up">
@@ -79,60 +73,20 @@ export default async function Profile() {
             <p className="text-lg font-semibold dark:text-white">
               {user.name ?? "Unnamed User"}
             </p>
-            {isAdmin && (
-              <span className="inline-flex mt-1 rounded-full border border-amber-300/80 dark:border-amber-700/70 bg-amber-100/90 dark:bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-800 dark:text-amber-300">
-                Administrator
-              </span>
-            )}
             {user.email && (
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
                 {user.email}
               </p>
             )}
-            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
-              {providers.length > 0 ? `Connected via ${providers.join(", ")}` : "No linked providers"}
-            </p>
           </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-          <span className="rounded-full bg-neutral-100 dark:bg-neutral-800 px-3 py-1">
-            User ID: {userId}
-          </span>
-          <span className="rounded-full bg-neutral-100 dark:bg-neutral-800 px-3 py-1">
-            Task Completion: {completionPercent}%
-          </span>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Tasks" value={taskCount} color="blue" />
         <StatCard label="Notes" value={noteCount} color="purple" />
         <StatCard label="Projects" value={projectCount} color="green" />
-        <StatCard label="Dispatches" value={dispatchCount} color="yellow" />
       </section>
-
-      <ProfilePreferences
-        isAdmin={isAdmin}
-        showAdminQuickAccess={showAdminQuickAccess}
-        assistantEnabled={assistantEnabled}
-      />
-
-      {isAdmin && (
-        <section className="rounded-xl border border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-50 via-white to-yellow-50 dark:from-amber-950/30 dark:via-neutral-900 dark:to-yellow-950/20 p-6 shadow-sm">
-          <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-300">Administration</h2>
-          <p className="text-xs text-amber-700/80 dark:text-amber-400 mt-1">
-            Access administrator controls for user management and security settings.
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/administration"
-              className="inline-flex items-center rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500 transition-all active:scale-95"
-            >
-              Open Administration
-            </Link>
-          </div>
-        </section>
-      )}
 
     </div>
   );

@@ -50,9 +50,6 @@ next-env.d.ts
 .dispatch-security.*.json
 
 # editor
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
 .idea/
 *.swp
 *.swo

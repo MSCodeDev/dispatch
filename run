@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+#
+# Dispatch developer launcher for the Dispatch task management app.
+#
+# Usage:
+#   ./run <command>
+#
+# Commands:
+#   init     Install deps, configure env, run migrations
+#   start    Start the development server
+#   build    Create a production build
+#   update   Pull latest, install deps, run migrations
+#   studio   Open Drizzle Studio (database GUI)
+#   test     Run the test suite
+#   lint     Run ESLint
+#   reset    Reset and re-seed the database
+#   release  Bump version, tag, and push to main
+#   help     Show this help message
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# ── Colors ────────────────────────────────────────────────────
+RESET="\033[0m"
+BOLD="\033[1m"
+DIM="\033[2m"
+UNDERLINE="\033[4m"
+CYAN="\033[36m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RED="\033[31m"
+
+# 256-color palette for gradient
+C1="\033[38;5;51m"
+C2="\033[38;5;50m"
+C3="\033[38;5;44m"
+C4="\033[38;5;38m"
+C5="\033[38;5;32m"
+C6="\033[38;5;44m"
+
+# ── Logo ──────────────────────────────────────────────────────
+show_logo() {
+    echo ""
+    echo -e "${C1}  ██████╗ ██╗███████╗██████╗  █████╗ ████████╗ ██████╗██╗  ██╗${RESET}"
+    echo -e "${C2}  ██╔══██╗██║██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██║  ██║${RESET}"
+    echo -e "${C3}  ██║  ██║██║███████╗██████╔╝███████║   ██║   ██║     ███████║${RESET}"
+    echo -e "${C4}  ██║  ██║██║╚════██║██╔═══╝ ██╔══██║   ██║   ██║     ██╔══██║${RESET}"
+    echo -e "${C5}  ██████╔╝██║███████║██║     ██║  ██║   ██║   ╚██████╗██║  ██║${RESET}"
+    echo -e "${C6}  ╚═════╝ ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝${RESET}"
+    echo ""
+}
+
+# ── Help ──────────────────────────────────────────────────────
+show_help() {
+    show_logo
+
+    echo -e "  ${BOLD}USAGE${RESET}"
+    echo -e "    ./run ${CYAN}<command>${RESET}"
+    echo ""
+    echo -e "  ${BOLD}COMMANDS${RESET}"
+
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "init"    "Install deps, configure env, run migrations"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "start"   "Start the development server (http://localhost:3000)"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "build"   "Create a production build"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "update"  "Pull latest changes, install deps, run migrations"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "studio"  "Open Drizzle Studio (database GUI)"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "test"    "Run the test suite"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "lint"    "Run ESLint"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "reset"   "Reset and re-seed the database"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "release" "Bump version, tag, and push to main"
+    printf "    ${CYAN}%-10s${RESET} ${DIM}%s${RESET}\n" "help"    "Show this help message"
+    echo ""
+}
+
+# ── Prerequisite checks ──────────────────────────────────────
+assert_node_modules() {
+    if [ ! -d "node_modules" ]; then
+        echo -e "  ${YELLOW}Dependencies not installed. Running npm install...${RESET}"
+        echo ""
+        npm install
+        if [ $? -ne 0 ]; then
+            echo -e "  ${RED}npm install failed. Please fix errors and retry.${RESET}"
+            exit 1
+        fi
+        echo ""
+    fi
+}
+
+get_env_file_value() {
+    local target_key="$1"
+
+    if [ ! -f ".env.local" ]; then
+        return 1
+    fi
+
+    while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+        local line="${raw_line%$'\r'}"
+
+        case "$line" in
+            ""|\#*)
+                continue
+                ;;
+            "$target_key="*)
+                echo "${line#*=}"
+                return 0
+                ;;
+        esac
+    done < ".env.local"
+
+    return 1
+}
+
+# ── Commands ──────────────────────────────────────────────────
+cmd_init() {
+    show_logo
+    echo -e "  ${GREEN}Initializing Dispatch for local development...${RESET}"
+    echo ""
+
+    # Step 1: Install dependencies
+    echo -e "  [1/3] ${CYAN}Installing dependencies...${RESET}"
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "  ${RED}npm install failed. Please fix errors and retry.${RESET}"
+        exit 1
+    fi
+    echo ""
+
+    # Step 2: Configure .env.local
+    echo -e "  [2/3] ${CYAN}Configuring environment...${RESET}"
+    if [ -f ".env.local" ]; then
+        echo -e "  ${DIM}.env.local already exists — skipping.${RESET}"
+    else
+        local secret
+        secret=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null | tr -d '-' || echo "change_me_$(date +%s)")
+        cat > .env.local <<EOF
+# Required for NextAuth
+AUTH_SECRET=${secret}
+NEXTAUTH_URL=http://localhost:3000
+
+# Optional (defaults to ./dispatch.db)
+# DATABASE_URL=./dispatch.db
+EOF
+        echo -e "  ${GREEN}.env.local created.${RESET}"
+    fi
+    echo ""
+
+    # Step 3: Run migrations
+    echo -e "  [3/3] ${CYAN}Running database migrations...${RESET}"
+    npm run db:migrate
+    echo ""
+
+    echo -e "  ${GREEN}Init complete! Run ./run start to launch the app.${RESET}"
+    echo -e "  ${DIM}Open http://localhost:3000 in your browser.${RESET}"
+    echo ""
+}
+
+cmd_start() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${GREEN}Starting development server...${RESET}"
+    echo -e "  ${DIM}http://localhost:3000${RESET}"
+    echo ""
+    npm run dev
+}
+
+cmd_build() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${GREEN}Creating production build...${RESET}"
+    echo ""
+    npm run build
+}
+
+cmd_update() {
+    show_logo
+    echo -e "  ${GREEN}Updating Dispatch...${RESET}"
+    echo ""
+
+    # Pull latest changes
+    echo -e "  [1/3] ${CYAN}Pulling latest changes...${RESET}"
+    git pull || echo -e "  ${YELLOW}Git pull failed — you may have local changes. Continuing...${RESET}"
+    echo ""
+
+    # Install dependencies
+    echo -e "  [2/3] ${CYAN}Installing dependencies...${RESET}"
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "  ${RED}npm install failed.${RESET}"
+        exit 1
+    fi
+    echo ""
+
+    # Run migrations
+    echo -e "  [3/3] ${CYAN}Running database migrations...${RESET}"
+    npm run db:migrate || echo -e "  ${YELLOW}No pending migrations or migration failed.${RESET}"
+    echo ""
+
+    echo -e "  ${GREEN}Update complete!${RESET}"
+    echo ""
+}
+
+cmd_studio() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${GREEN}Opening Drizzle Studio...${RESET}"
+    echo -e "  ${DIM}Browse your database at https://local.drizzle.studio${RESET}"
+    echo ""
+    npm run db:studio
+}
+
+cmd_test() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${GREEN}Running tests...${RESET}"
+    echo ""
+    npm test
+}
+
+cmd_lint() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${GREEN}Running ESLint...${RESET}"
+    echo ""
+    npm run lint
+}
+
+cmd_reset() {
+    show_logo
+    assert_node_modules
+    echo -e "  ${YELLOW}Resetting database...${RESET}"
+    echo ""
+
+    local db_url
+    db_url=$(get_env_file_value "DATABASE_URL" || echo "./dispatch.db")
+    # Strip optional 'file:' prefix used by some SQLite drivers
+    local db_file="${db_url#file:}"
+
+    # Remove the database file
+    if [ -f "$db_file" ]; then
+        rm -f "$db_file"
+        echo -e "  ${DIM}Removed ${db_file}${RESET}"
+    else
+        echo -e "  ${DIM}No database file found at ${db_file} — skipping removal.${RESET}"
+    fi
+    echo ""
+
+    # Re-run migrations
+    echo -e "  [1/2] ${CYAN}Running migrations...${RESET}"
+    npm run db:migrate
+    echo ""
+
+    # Seed
+    echo -e "  [2/2] ${CYAN}Seeding database...${RESET}"
+    npm run db:seed
+    echo ""
+
+    echo -e "  ${GREEN}Database reset and seeded.${RESET}"
+    echo ""
+}
+
+cmd_release() {
+    show_logo
+    echo -e "  ${GREEN}Preparing production release...${RESET}"
+    echo ""
+
+    # ── Guard: uncommitted changes ────────────────────────────
+    if ! git diff-index --quiet HEAD --; then
+        echo -e "  ${RED}Error: You have uncommitted changes. Commit or stash them first.${RESET}"
+        echo ""
+        git status --short
+        exit 1
+    fi
+
+    # ── Guard: verify push permissions ───────────────────────
+    echo -e "  ${CYAN}Verifying push permissions for main...${RESET}"
+    if ! git ls-remote --exit-code origin main > /dev/null 2>&1; then
+        echo -e "  ${RED}Error: Cannot access 'main' branch on remote.${RESET}"
+        echo -e "  ${DIM}Make sure the branch exists and you have repository access.${RESET}"
+        exit 1
+    fi
+    if ! git push --dry-run origin main > /dev/null 2>&1; then
+        echo -e "  ${RED}Error: You don't have permission to push to 'main'.${RESET}"
+        echo -e "  ${DIM}Contact your repository administrator to grant push access.${RESET}"
+        exit 1
+    fi
+    echo -e "  ${DIM}Push permissions verified.${RESET}"
+    echo ""
+
+    # ── Fetch & sync main ─────────────────────────────────────
+    echo -e "  [1/5] ${CYAN}Fetching latest changes and tags...${RESET}"
+    git fetch origin --tags
+    git checkout main
+    git pull origin main
+    echo ""
+
+    # ── Calculate next version (YY.M.N) ──────────────────────
+    echo -e "  [2/5] ${CYAN}Calculating next version...${RESET}"
+    local current_year current_month latest_tag next_increment new_version new_tag
+    current_year=$(date +%y)
+    current_month=$(date +%-m)
+
+    latest_tag=$(git tag -l "v${current_year}.${current_month}.*" | sort -V | tail -n 1)
+    if [ -z "$latest_tag" ]; then
+        next_increment=1
+    else
+        local current_increment
+        current_increment=$(echo "$latest_tag" | sed "s/v${current_year}\.${current_month}\.//")
+        next_increment=$((current_increment + 1))
+    fi
+
+    new_version="${current_year}.${current_month}.${next_increment}"
+    new_tag="v${new_version}"
+    echo -e "  ${DIM}Next version: ${new_tag}${RESET}"
+    echo ""
+
+    # ── Run tests ─────────────────────────────────────────────
+    echo -e "  [3/5] ${CYAN}Running tests before release...${RESET}"
+    npm test
+    echo ""
+
+    # ── Update package.json / package-lock.json ───────────────
+    echo -e "  [4/5] ${CYAN}Bumping version to ${new_version}...${RESET}"
+    npm version "$new_version" --no-git-tag-version --allow-same-version
+    echo ""
+
+    # ── Build release notes (commits since last tag) ──────────
+    local prev_tag last_tag_ref release_notes
+    prev_tag=$(git tag -l "v*.*.*" | sort -V | tail -n 1)
+    if [ -z "$prev_tag" ]; then
+        last_tag_ref=$(git rev-list --max-parents=0 HEAD)
+    else
+        last_tag_ref="$prev_tag"
+    fi
+    release_notes=$(git log "${last_tag_ref}..HEAD" --pretty=format:"- %s" --no-merges 2>/dev/null || true)
+    if [ -z "$release_notes" ]; then
+        release_notes="- No changes since last release"
+    fi
+
+    # ── Confirm ───────────────────────────────────────────────
+    echo -e "  ${BOLD}Tag:${RESET}     ${new_tag}"
+    echo -e "  ${BOLD}Changes:${RESET}"
+    echo "$release_notes" | sed 's/^/    /'
+    echo ""
+    read -rp "  Release ${new_tag} to production? (yes/no): " confirm
+    if [ "$confirm" != "yes" ]; then
+        echo -e "  ${YELLOW}Release cancelled.${RESET}"
+        exit 1
+    fi
+
+    # ── Commit version bump, tag, and push ────────────────────
+    echo -e "  [5/5] ${CYAN}Committing, tagging, and pushing...${RESET}"
+    git add package.json package-lock.json
+    if ! git diff --cached --quiet; then
+        git commit -m "chore: bump version to ${new_tag}"
+    fi
+
+    git tag -a "$new_tag" -m "Release ${new_tag}"
+    git push origin main
+    git push origin "$new_tag"
+
+    echo ""
+    echo -e "  ${GREEN}${new_tag} released to production!${RESET}"
+    echo ""
+    echo -e "  ${BOLD}Changes in this release:${RESET}"
+    echo "$release_notes" | sed 's/^/    /'
+    echo ""
+}
+
+# ── Route ─────────────────────────────────────────────────────
+COMMAND="${1:-help}"
+
+case "$COMMAND" in
+    init)    cmd_init ;;
+    start)   cmd_start ;;
+    build)   cmd_build ;;
+    update)  cmd_update ;;
+    studio)  cmd_studio ;;
+    test)    cmd_test ;;
+    lint)    cmd_lint ;;
+    reset)   cmd_reset ;;
+    release) cmd_release ;;
+    help)    show_help ;;
+    *)
+        echo -e "  ${RED}Unknown command: ${COMMAND}${RESET}"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac

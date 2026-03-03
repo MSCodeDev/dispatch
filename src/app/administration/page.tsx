@@ -31,12 +31,6 @@ export default async function AdministrationPage() {
             User management, role delegation, and security controls.
           </p>
         </div>
-        <Link
-          href="/profile"
-          className="rounded-lg border border-neutral-200 dark:border-neutral-700 px-3 py-2 text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-95"
-        >
-          Back to Profile
-        </Link>
       </div>
 
       <AdminSettingsPanel currentUserId={session.user.id} />

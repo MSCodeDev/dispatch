@@ -40,9 +40,9 @@ export const POST = withAuth(async (req, session, ctx) => {
 
   const unfinished = linkedTasks.filter((t) => t.status !== "done");
 
-  // Calculate next day
-  const currentDate = new Date(dispatch.date + "T00:00:00");
-  currentDate.setDate(currentDate.getDate() + 1);
+  // Calculate next day using UTC to avoid timezone-shift bugs
+  const currentDate = new Date(dispatch.date + "T00:00:00Z");
+  currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   const nextDate = currentDate.toISOString().split("T")[0];
 
   const now = new Date().toISOString();

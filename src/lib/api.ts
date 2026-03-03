@@ -40,8 +40,6 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       image: users.image,
       role: users.role,
       frozenAt: users.frozenAt,
-      showAdminQuickAccess: users.showAdminQuickAccess,
-      assistantEnabled: users.assistantEnabled,
     })
     .from(apiKeys)
     .innerJoin(users, eq(apiKeys.userId, users.id))
@@ -63,8 +61,6 @@ async function resolveApiKeySession(req: Request): Promise<Session | null> {
       image: result.image,
       role: (result.role as "member" | "admin" | null | undefined) ?? "member",
       isFrozen: Boolean(result.frozenAt),
-      showAdminQuickAccess: result.showAdminQuickAccess ?? true,
-      assistantEnabled: result.assistantEnabled ?? true,
     },
     expires: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
   };
@@ -86,8 +82,6 @@ export function withAuth<TCtx = unknown>(
     if (session?.user) {
       session.user.role = session.user.role ?? "member";
       session.user.isFrozen = Boolean(session.user.isFrozen);
-      session.user.showAdminQuickAccess = session.user.showAdminQuickAccess ?? true;
-      session.user.assistantEnabled = session.user.assistantEnabled ?? true;
       if (session.user.isFrozen) {
         return errorResponse("Account is frozen", 403);
       }
@@ -99,8 +93,6 @@ export function withAuth<TCtx = unknown>(
       if (apiKeySession?.user) {
         apiKeySession.user.role = apiKeySession.user.role ?? "member";
         apiKeySession.user.isFrozen = Boolean(apiKeySession.user.isFrozen);
-        apiKeySession.user.showAdminQuickAccess = apiKeySession.user.showAdminQuickAccess ?? true;
-        apiKeySession.user.assistantEnabled = apiKeySession.user.assistantEnabled ?? true;
         if (apiKeySession.user.isFrozen) {
           return errorResponse("Account is frozen", 403);
         }
