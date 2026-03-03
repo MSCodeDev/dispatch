@@ -37,6 +37,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   dueDate: string | null;
+  timeEstimate: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -312,6 +313,7 @@ export const api = {
       status?: TaskStatus;
       priority?: TaskPriority;
       dueDate?: string;
+      timeEstimate?: number | null;
       projectId?: string | null;
     }) =>
       request<Task>("/tasks", { method: "POST", body: JSON.stringify(data) }).then((task) => {
@@ -327,6 +329,7 @@ export const api = {
         status?: TaskStatus;
         priority?: TaskPriority;
         dueDate?: string | null;
+        timeEstimate?: number | null;
         projectId?: string | null;
       },
     ) =>

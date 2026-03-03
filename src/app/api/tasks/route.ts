@@ -76,7 +76,7 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { title, description, status, priority, dueDate, projectId } = body as Record<string, unknown>;
+  const { title, description, status, priority, dueDate, timeEstimate, projectId } = body as Record<string, unknown>;
 
   if (!title || typeof title !== "string" || title.trim().length === 0) {
     return errorResponse("title is required and must be a non-empty string", 400);
@@ -114,6 +114,10 @@ export const POST = withAuth(async (req, session) => {
     return errorResponse("projectId must be a string or null", 400);
   }
 
+  if (timeEstimate !== undefined && timeEstimate !== null && (typeof timeEstimate !== "number" || timeEstimate < 0 || timeEstimate % 0.5 !== 0)) {
+    return errorResponse("timeEstimate must be a non-negative number in increments of 0.5", 400);
+  }
+
   let resolvedProjectId: string | null | undefined = undefined;
   if (projectId === null) {
     resolvedProjectId = null;
@@ -140,6 +144,7 @@ export const POST = withAuth(async (req, session) => {
       status: (status as typeof VALID_STATUSES[number]) ?? "open",
       priority: (priority as typeof VALID_PRIORITIES[number]) ?? "medium",
       dueDate: dueDate as string | undefined,
+      timeEstimate: timeEstimate as number | undefined,
       createdAt: now,
       updatedAt: now,
     })

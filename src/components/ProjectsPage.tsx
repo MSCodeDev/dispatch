@@ -52,8 +52,6 @@ export function ProjectsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [showCompletedProjects, setShowCompletedProjects] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectWithStats | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
@@ -73,13 +71,7 @@ export function ProjectsPage() {
     () => projects.find((p) => p.id === selectedId) ?? null,
     [projects, selectedId],
   );
-  const visibleProjects = useMemo(
-    () =>
-      showCompletedProjects
-        ? projects
-        : projects.filter((project) => project.status !== "completed"),
-    [projects, showCompletedProjects],
-  );
+  const visibleProjects = useMemo(() => projects, [projects]);
 
   // Sync description draft when selected project changes
   useEffect(() => {
@@ -87,14 +79,30 @@ export function ProjectsPage() {
     setDescriptionSaved(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProject?.id]);
-  const visibleTasks = useMemo(
-    () => (
-      showCompleted
-        ? tasks
-        : tasks.filter((task) => task.status !== "done" || completingTaskIds.includes(task.id))
-    ),
-    [tasks, showCompleted, completingTaskIds],
-  );
+  const visibleTasks = useMemo(() => tasks, [tasks]);
+
+  const groupedTasks = useMemo(() => {
+    const groups = new Map<string, Task[]>();
+    for (const task of visibleTasks) {
+      const key = task.dueDate ? task.dueDate.slice(0, 7) : "__undated__";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(task);
+    }
+    const sorted = Array.from(groups.keys()).sort((a, b) => {
+      if (a === "__undated__") return 1;
+      if (b === "__undated__") return -1;
+      return a.localeCompare(b);
+    });
+    return sorted.map((key) => ({
+      key,
+      label:
+        key === "__undated__"
+          ? "No Due Date"
+          : new Date(key + "-02").toLocaleString("default", { month: "long", year: "numeric" }),
+      tasks: groups.get(key)!,
+      totalHours: groups.get(key)!.reduce((sum, t) => sum + (t.timeEstimate ?? 0), 0),
+    }));
+  }, [visibleTasks]);
 
   function queueCompletionCleanup(taskId: string) {
     const existing = completionTimeoutsRef.current[taskId];
@@ -138,13 +146,7 @@ export function ProjectsPage() {
       router.replace(`/projects?projectId=${visibleProjects[0].id}`, { scroll: false });
       return;
     }
-    if (!showCompletedProjects && selectedProject?.status === "completed") {
-      const nextProject = projects.find((project) => project.status !== "completed");
-      if (nextProject) {
-        router.replace(`/projects?projectId=${nextProject.id}`, { scroll: false });
-      }
-    }
-  }, [selectedId, projects, router, visibleProjects, showCompletedProjects, selectedProject]);
+  }, [selectedId, projects, router, visibleProjects]);
 
   useEffect(() => {
     if (searchParams.get("new") !== "1") return;
@@ -278,7 +280,7 @@ export function ProjectsPage() {
   async function handleTaskDoneToggle(task: Task) {
     const nextStatus: TaskStatus = task.status === "done" ? "open" : "done";
     const previousStatus = task.status;
-    const shouldAnimateDismiss = nextStatus === "done" && !showCompleted;
+    const shouldAnimateDismiss = false;
 
     if (completingTaskIds.includes(task.id)) {
       return;
@@ -482,26 +484,7 @@ export function ProjectsPage() {
                         <span className="text-xs text-neutral-400 dark:text-neutral-500">
                           {selectedProject.stats.done}/{selectedProject.stats.total} done
                         </span>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={showCompleted}
-                          onClick={() => setShowCompleted((prev) => !prev)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
-                        >
-                          <span>Show Completed</span>
-                          <span
-                            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                              showCompleted ? "bg-blue-600" : "bg-neutral-300 dark:bg-neutral-700"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
-                                showCompleted ? "translate-x-3.5" : "translate-x-0.5"
-                              }`}
-                            />
-                          </span>
-                        </button>
+
                       </div>
                     </div>
 
@@ -517,82 +500,103 @@ export function ProjectsPage() {
                       <p className="text-sm text-neutral-400 dark:text-neutral-500">
                         {tasks.length === 0
                           ? "No tasks in this project yet"
-                          : "All tasks are completed. Toggle Show Completed to view them."}
+                          : "All tasks are completed."}
                       </p>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-                      {visibleTasks.map((task, i) => {
-                        const isCompleting = completingTaskIds.includes(task.id);
-                        return (
-                          <div
-                            key={task.id}
-                            className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
-                              i > 0 ? "border-t border-neutral-100 dark:border-neutral-800/60" : ""
-                            } ${
-                              task.status === "done" && !isCompleting ? "opacity-60" : ""
-                            } ${
-                              isCompleting ? "animate-task-complete-dismiss" : ""
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={task.status === "done" || isCompleting}
-                              onChange={() => handleTaskDoneToggle(task)}
-                              className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                            />
-                            <span
-                              className={`flex-1 truncate dark:text-white ${
-                                task.status === "done" && !isCompleting
-                                  ? "line-through text-neutral-400 dark:text-neutral-500"
-                                  : ""
-                              } ${
-                                isCompleting ? "task-title-completing" : ""
-                              }`}
-                            >
-                              {task.title}
+                    <div className="space-y-3">
+                      {groupedTasks.map(({ key, label, tasks: groupTasks, totalHours }) => (
+                        <div key={key} className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                              {label}
                             </span>
-                            {task.status !== "done" && (
-                              <button
-                                type="button"
-                                onClick={() => handleTaskStatusToggle(task)}
-                                title="Click to toggle status"
-                                className={`text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95 ${STATUS_BADGES[task.status]}`}
-                              >
-                                {task.status === "in_progress" ? "in-progress" : task.status}
-                              </button>
-                            )}
-                            {task.dueDate && (
-                              <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                                {task.dueDate}
+                            {totalHours > 0 && (
+                              <span className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500">
+                                <IconClock className="w-3.5 h-3.5" />
+                                {totalHours % 1 === 0 ? `${totalHours}h` : `${totalHours}h`}
                               </span>
                             )}
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleTaskEdit(task.id)}
-                                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-95"
-                                title="Edit task"
-                              >
-                                <IconPencil className="w-4 h-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleTaskDelete(task.id)}
-                                data-task-delete={task.id}
-                                className={`p-1.5 rounded-lg transition-all active:scale-95 ${
-                                  deletingTaskId === task.id
-                                    ? "bg-red-600 text-white hover:bg-red-500"
-                                    : "text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                                }`}
-                                title={deletingTaskId === task.id ? "Click again to confirm" : "Delete task"}
-                              >
-                                <IconTrash className="w-4 h-4" />
-                              </button>
-                            </div>
                           </div>
-                        );
-                      })}
+                          {groupTasks.map((task, i) => {
+                            const isCompleting = completingTaskIds.includes(task.id);
+                            return (
+                              <div
+                                key={task.id}
+                                className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                                  i > 0 ? "border-t border-neutral-100 dark:border-neutral-800/60" : ""
+                                } ${
+                                  task.status === "done" && !isCompleting ? "opacity-60" : ""
+                                } ${
+                                  isCompleting ? "animate-task-complete-dismiss" : ""
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={task.status === "done" || isCompleting}
+                                  onChange={() => handleTaskDoneToggle(task)}
+                                  className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                                />
+                                <span
+                                  className={`flex-1 truncate dark:text-white ${
+                                    task.status === "done" && !isCompleting
+                                      ? "line-through text-neutral-400 dark:text-neutral-500"
+                                      : ""
+                                  } ${
+                                    isCompleting ? "task-title-completing" : ""
+                                  }`}
+                                >
+                                  {task.title}
+                                </span>
+                                {task.timeEstimate != null && (
+                                  <span className="flex items-center gap-1 text-xs text-neutral-400 dark:text-neutral-500 shrink-0">
+                                    <IconClock className="w-3.5 h-3.5" />
+                                    {task.timeEstimate % 1 === 0 ? `${task.timeEstimate}h` : `${task.timeEstimate}h`}
+                                  </span>
+                                )}
+                                {task.status !== "done" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskStatusToggle(task)}
+                                    title="Click to toggle status"
+                                    className={`text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95 ${STATUS_BADGES[task.status]}`}
+                                  >
+                                    {task.status === "in_progress" ? "in-progress" : task.status}
+                                  </button>
+                                )}
+                                {task.dueDate && (
+                                  <span className="text-xs text-neutral-400 dark:text-neutral-500">
+                                    {task.dueDate}
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskEdit(task.id)}
+                                    className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-95"
+                                    title="Edit task"
+                                  >
+                                    <IconPencil className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTaskDelete(task.id)}
+                                    data-task-delete={task.id}
+                                    className={`p-1.5 rounded-lg transition-all active:scale-95 ${
+                                      deletingTaskId === task.id
+                                        ? "bg-red-600 text-white hover:bg-red-500"
+                                        : "text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                    }`}
+                                    title={deletingTaskId === task.id ? "Click again to confirm" : "Delete task"}
+                                  >
+                                    <IconTrash className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
                     </div>
                   )}
                   </div>
@@ -606,26 +610,7 @@ export function ProjectsPage() {
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
                 Projects
               </p>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={showCompletedProjects}
-                onClick={() => setShowCompletedProjects((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 px-2.5 py-1 text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all active:scale-95"
-              >
-                <span>Show Completed</span>
-                <span
-                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                    showCompletedProjects ? "bg-blue-600" : "bg-neutral-300 dark:bg-neutral-700"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${
-                      showCompletedProjects ? "translate-x-3.5" : "translate-x-0.5"
-                    }`}
-                  />
-                </span>
-              </button>
+
             </div>
             {visibleProjects.length === 0 ? (
               <div className="rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 p-6 text-center">
@@ -633,7 +618,7 @@ export function ProjectsPage() {
                 <p className="text-sm text-neutral-400 dark:text-neutral-500">
                   {projects.length === 0
                     ? "No projects yet"
-                    : "All projects are completed. Toggle Show Completed to view them."}
+                    : "All projects are completed."}
                 </p>
               </div>
             ) : (

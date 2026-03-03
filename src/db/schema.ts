@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, primaryKey, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // --- NextAuth tables (must match @auth/drizzle-adapter expectations) ---
@@ -100,6 +100,7 @@ export const tasks = sqliteTable(
       .notNull()
       .default("medium"),
     dueDate: text("dueDate"),
+    timeEstimate: real("timeEstimate"),
     deletedAt: text("deletedAt"),
     createdAt: text("createdAt")
       .notNull()

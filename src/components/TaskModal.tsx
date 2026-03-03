@@ -39,6 +39,9 @@ export function TaskModal({
     task?.priority ?? "medium",
   );
   const [dueDate, setDueDate] = useState(task?.dueDate ?? defaultDueDate ?? "");
+  const [timeEstimate, setTimeEstimate] = useState<string>(
+    task?.timeEstimate != null ? String(task.timeEstimate) : "",
+  );
   const [projectId, setProjectId] = useState(
     task?.projectId ?? defaultProjectId ?? "",
   );
@@ -101,6 +104,7 @@ export function TaskModal({
           status,
           priority,
           dueDate: dueDate || null,
+          timeEstimate: timeEstimate !== "" ? Number(timeEstimate) : null,
           projectId: projectId || null,
         });
       } else {
@@ -110,6 +114,7 @@ export function TaskModal({
           status,
           priority,
           dueDate: dueDate || undefined,
+          timeEstimate: timeEstimate !== "" ? Number(timeEstimate) : undefined,
           projectId: projectId || null,
         });
       }
@@ -207,7 +212,7 @@ export function TaskModal({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-[0.8fr_1.2fr] gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
               Due Date
@@ -216,6 +221,22 @@ export function TaskModal({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
+            />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Time (hours)
+            </p>
+            <input
+              type="number"
+              lang="en"
+              min="0"
+              step="0.5"
+              value={timeEstimate}
+              onChange={(e) => setTimeEstimate(e.target.value)}
+              placeholder="—"
               className="mt-2 w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-2 text-sm dark:text-white focus:border-blue-500 dark:focus:border-blue-400 focus:outline-none transition-colors"
             />
           </div>
@@ -298,10 +319,10 @@ function PillGroup({
               type="button"
               onClick={() => onChange(option.value)}
               aria-pressed={active}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all ${
                 active
-                  ? "border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-900"
-                  : "border-neutral-200 bg-white/80 text-neutral-600 hover:text-neutral-900 hover:border-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:text-white dark:hover:border-neutral-500"
+                  ? "border-neutral-900 font-semibold text-neutral-900 dark:border-white dark:text-white"
+                  : "border-neutral-200 bg-white/80 font-medium text-neutral-600 hover:text-neutral-900 hover:border-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:text-white dark:hover:border-neutral-500"
               }`}
             >
               {option.dot && <span className={`h-2.5 w-2.5 rounded-full ${option.dot}`} />}
