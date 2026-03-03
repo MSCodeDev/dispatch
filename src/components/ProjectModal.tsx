@@ -72,7 +72,7 @@ export function ProjectModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto px-4 py-8 sm:py-12">
       <div
-        className="absolute inset-0 bg-black/40 animate-backdrop-enter"
+        className="fixed inset-0 bg-black/40 animate-backdrop-enter"
         onClick={onClose}
       />
 

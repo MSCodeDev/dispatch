@@ -30,10 +30,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/src/mcp-server ./src/mcp-server
 COPY --from=builder /app/src/db/index.ts ./src/db/index.ts
 COPY --from=builder /app/src/db/schema.ts ./src/db/schema.ts
-COPY --from=builder /app/src/lib/db-encryption.ts ./src/lib/db-encryption.ts
 COPY --from=builder /app/docker/entrypoint.sh ./docker/entrypoint.sh
 COPY --from=builder /app/docker/repair-migrations.js ./docker/repair-migrations.js
 

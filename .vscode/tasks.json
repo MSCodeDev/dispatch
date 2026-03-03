@@ -1,0 +1,132 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start",
+      "type": "shell",
+      "command": "./run start",
+      "group": "build",
+      "detail": "Start the development server (http://localhost:3000)",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "owner": "next",
+        "pattern": {
+          "regexp": "^(.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting",
+          "endsPattern": "Ready in"
+        }
+      }
+    },
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "./run build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "detail": "Create a production build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Update",
+      "type": "shell",
+      "command": "./run update",
+      "group": "build",
+      "detail": "Pull latest changes, install deps, run migrations",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Initialize",
+      "type": "shell",
+      "command": "./run init",
+      "group": "build",
+      "detail": "Install deps, configure env, run migrations",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Drizzle Studio",
+      "type": "shell",
+      "command": "./run studio",
+      "group": "build",
+      "detail": "Open Drizzle Studio (database GUI)",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "./run test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "detail": "Run the test suite",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "./run lint",
+      "group": "test",
+      "detail": "Run ESLint",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": ["$eslint-stylish"]
+    },
+    {
+      "label": "Reset",
+      "type": "shell",
+      "command": "./run reset",
+      "group": "build",
+      "detail": "Reset and re-seed the database",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Release",
+      "type": "shell",
+      "command": "./run release",
+      "group": "build",
+      "detail": "Bump version, tag, and push to main",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

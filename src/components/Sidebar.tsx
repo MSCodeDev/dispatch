@@ -352,7 +352,7 @@ export function Sidebar({ onShortcutHelp, onSearchOpen }: SidebarProps) {
   }
 
   const profileActive = isActive("/profile");
-  const canShowAdminQuickAccess = session?.user?.role === "admin" && (session?.user?.showAdminQuickAccess ?? true);
+  const canShowAdminQuickAccess = session?.user?.role === "admin";
 
   const currentProjectId = useMemo(() => {
     if (pathname.startsWith("/projects") || pathname.startsWith("/tasks")) {
@@ -365,7 +365,7 @@ export function Sidebar({ onShortcutHelp, onSearchOpen }: SidebarProps) {
   const workspaceNavItems = useMemo(() => {
     const items = [...WORKSPACE_NAV];
     return items;
-  }, [session?.user?.assistantEnabled]);
+  }, []);
 
   /* ── Mobile: bottom bar ── */
   if (isMobile) {
