@@ -66,6 +66,14 @@ export function CalendarPage() {
   const suppressRefreshRef = useRef(false);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Context menu
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    task: Task;
+    x: number;
+    y: number;
+  } | null>(null);
+
   const fetchTasks = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -332,6 +340,29 @@ export function CalendarPage() {
     }
   }
 
+  function handleTaskContextMenu(e: React.MouseEvent, task: Task) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Clamp so menu doesn't overflow viewport
+    const menuW = 220;
+    const menuH = 380;
+    const x = Math.min(e.clientX, window.innerWidth - menuW - 8);
+    const y = Math.min(e.clientY, window.innerHeight - menuH - 8);
+    setContextMenu({ task, x, y });
+  }
+
+  async function applyContextMenuUpdate(taskId: string, patch: Partial<Task>) {
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...patch } : t)));
+    setContextMenu(null);
+    try {
+      suppressRefreshRef.current = true;
+      await api.tasks.update(taskId, patch as Record<string, unknown>);
+    } catch {
+      fetchTasks();
+      toast.error("Failed to update task");
+    }
+  }
+
   function handleModalClose() {
     setModalOpen(false);
     setEditingTask(null);
@@ -344,6 +375,25 @@ export function CalendarPage() {
     setDefaultDueDate(undefined);
     toast.success("Task saved");
   }
+
+  // Dismiss context menu on outside click or Escape
+  useEffect(() => {
+    if (!contextMenu) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setContextMenu(null);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [contextMenu]);
 
   // Count tasks without due dates
   const tasksWithoutDueDate = useMemo(() => tasks.filter((t) => !t.dueDate).length, [tasks]);
@@ -455,6 +505,7 @@ export function CalendarPage() {
                           <button
                             key={task.id}
                             onClick={(e) => handleTaskClick(e, task)}
+                            onContextMenu={(e) => handleTaskContextMenu(e, task)}
                             title={`${task.title} — ${statusLabel(task.status)}`}
                             className={`
                               w-full text-left rounded-lg px-3 py-2.5 flex items-center gap-2.5
@@ -567,6 +618,7 @@ export function CalendarPage() {
                           onDragStart={(e) => handleDragStart(e, task)}
                           onDragEnd={handleDragEnd}
                           onClick={(e) => handleTaskClick(e, task)}
+                          onContextMenu={(e) => handleTaskContextMenu(e, task)}
                           title={`${task.title} — ${statusLabel(task.status)}`}
                           className={`
                             w-full text-left rounded-md px-2 py-1 text-sm leading-snug truncate flex items-center gap-1.5
@@ -590,6 +642,114 @@ export function CalendarPage() {
           </div>
         )}
       </div>
+      )}
+
+      {/* Task Context Menu */}
+      {contextMenu && (
+        <div
+          ref={contextMenuRef}
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-50 w-56 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl py-1 text-sm"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {/* Section: Status */}
+          <div className="px-3 py-1.5 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            Status
+          </div>
+          <div className="flex flex-wrap gap-1 px-3 pb-2">
+            {(["open", "in_progress", "done"] as const).map((s) => {
+              const activeClass = {
+                open: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+                in_progress: "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300",
+                done: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+              }[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => applyContextMenuUpdate(contextMenu.task.id, { status: s })}
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors
+                    ${
+                      contextMenu.task.status === s
+                        ? activeClass
+                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    }`}
+                >
+                  {statusLabel(s)}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
+
+          {/* Section: Time Estimate */}
+          <div className="px-3 py-1.5 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            Time Estimate
+          </div>
+          <div className="flex flex-wrap gap-1 px-3 pb-2">
+            {[0.5, 1, 2, 4, 8].map((h) => (
+              <button
+                key={h}
+                onClick={() => applyContextMenuUpdate(contextMenu.task.id, { timeEstimate: h })}
+                className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors
+                  ${
+                    contextMenu.task.timeEstimate === h
+                      ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                  }`}
+              >
+                {h}h
+              </button>
+            ))}
+            {contextMenu.task.timeEstimate != null && (
+              <button
+                onClick={() => applyContextMenuUpdate(contextMenu.task.id, { timeEstimate: null })}
+                className="rounded-md px-2 py-0.5 text-xs font-medium bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="my-1 border-t border-neutral-100 dark:border-neutral-800" />
+
+          {/* Section: Project */}
+          <div className="px-3 py-1.5 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            Project
+          </div>
+          <div className="flex flex-wrap gap-1 px-3 pb-2">
+            <button
+              onClick={() => applyContextMenuUpdate(contextMenu.task.id, { projectId: null })}
+              className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors
+                ${
+                  !contextMenu.task.projectId
+                    ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300"
+                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 italic"
+                }`}
+            >
+              None
+            </button>
+            {projects.filter((p) => !p.deletedAt && p.status !== "completed").map((project) => {
+              const col = PROJECT_COLORS[project.color as keyof typeof PROJECT_COLORS];
+              const isSelected = contextMenu.task.projectId === project.id;
+              return (
+                <button
+                  key={project.id}
+                  onClick={() => applyContextMenuUpdate(contextMenu.task.id, { projectId: project.id })}
+                  className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors flex items-center gap-1.5
+                    ${
+                      isSelected
+                        ? (col?.badge ?? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300")
+                        : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700"
+                    }`}
+                >
+                  <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${col ? col.dot : "bg-neutral-300"}`} />
+                  <span className="truncate max-w-[120px]">{project.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Task Modal */}
