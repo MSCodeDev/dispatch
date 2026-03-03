@@ -274,42 +274,31 @@ cmd_release() {
     fi
 
     # ── Guard: verify push permissions ───────────────────────
-    echo -e "  ${CYAN}Verifying push permissions for main...${RESET}"
-    if ! git ls-remote --exit-code origin main > /dev/null 2>&1; then
-        echo -e "  ${RED}Error: Cannot access 'main' branch on remote.${RESET}"
-        echo -e "  ${DIM}Make sure the branch exists and you have repository access.${RESET}"
-        exit 1
-    fi
-    if ! git push --dry-run origin main > /dev/null 2>&1; then
-        echo -e "  ${RED}Error: You don't have permission to push to 'main'.${RESET}"
-        echo -e "  ${DIM}Contact your repository administrator to grant push access.${RESET}"
-        exit 1
-    fi
+    echo -e "  ${CYAN}Verifying push permissions...${RESET}"
+    for branch in develop main; do
+        if ! git ls-remote --exit-code origin "$branch" > /dev/null 2>&1; then
+            echo -e "  ${RED}Error: Cannot access '${branch}' branch on remote.${RESET}"
+            echo -e "  ${DIM}Make sure the branch exists and you have repository access.${RESET}"
+            exit 1
+        fi
+        if ! git push --dry-run origin "$branch" > /dev/null 2>&1; then
+            echo -e "  ${RED}Error: You don't have permission to push to '${branch}'.${RESET}"
+            echo -e "  ${DIM}Contact your repository administrator to grant push access.${RESET}"
+            exit 1
+        fi
+    done
     echo -e "  ${DIM}Push permissions verified.${RESET}"
     echo ""
 
-    # ── Fetch & sync main ─────────────────────────────────────
-    echo -e "  [1/6] ${CYAN}Fetching latest changes and tags...${RESET}"
+    # ── Fetch & sync develop ──────────────────────────────────
+    echo -e "  [1/5] ${CYAN}Fetching latest changes and tags...${RESET}"
     git fetch origin --tags
-    git checkout main
-    git pull origin main
-    echo ""
-
-    # ── Merge develop into main ───────────────────────────────
-    echo -e "  [2/6] ${CYAN}Merging develop into main...${RESET}"
-    if ! git ls-remote --exit-code origin develop > /dev/null 2>&1; then
-        echo -e "  ${RED}Error: 'develop' branch not found on remote.${RESET}"
-        exit 1
-    fi
-    git fetch origin develop
-    if ! git merge --no-edit origin/develop; then
-        echo -e "  ${RED}Error: Merge conflict. Resolve conflicts and retry.${RESET}"
-        exit 1
-    fi
+    git checkout develop
+    git pull origin develop
     echo ""
 
     # ── Calculate next version (YY.M.N) ──────────────────────
-    echo -e "  [3/6] ${CYAN}Calculating next version...${RESET}"
+    echo -e "  [2/5] ${CYAN}Calculating next version...${RESET}"
     local current_year current_month latest_tag next_increment new_version new_tag
     current_year=$(date +%y)
     current_month=$(date +%-m)
@@ -329,14 +318,13 @@ cmd_release() {
     echo ""
 
     # ── Run tests ─────────────────────────────────────────────
-    echo -e "  [4/6] ${CYAN}Running tests before release...${RESET}"
+    echo -e "  [3/5] ${CYAN}Running tests before release...${RESET}"
     npm test
     echo ""
 
-    # ── Update package.json / package-lock.json ───────────────
-    echo -e "  [5/6] ${CYAN}Bumping version to ${new_version}...${RESET}"
+    # ── Bump version on develop and push ─────────────────────
+    echo -e "  [4/5] ${CYAN}Bumping version to ${new_version} on develop...${RESET}"
     npm version "$new_version" --no-git-tag-version --allow-same-version
-    echo ""
 
     # ── Build release notes (commits since last tag) ──────────
     local prev_tag last_tag_ref release_notes
@@ -362,15 +350,20 @@ cmd_release() {
         exit 1
     fi
 
-    # ── Commit version bump, tag, and push ────────────────────
-    echo -e "  [6/6] ${CYAN}Committing, tagging, and pushing...${RESET}"
     git add package.json package-lock.json
     if ! git diff --cached --quiet; then
         git commit -m "chore: bump version to ${new_tag}"
     fi
+    git push origin develop
+    echo ""
 
+    # ── Fast-forward main to develop, tag, and push ───────────
+    echo -e "  [5/5] ${CYAN}Updating main and tagging release...${RESET}"
+    git checkout main
+    git pull origin main
+    git reset --hard develop
     git tag -a "$new_tag" -m "Release ${new_tag}"
-    git push origin main
+    git push --force-with-lease origin main
     git push origin "$new_tag"
 
     # ── Return to develop ─────────────────────────────────────
